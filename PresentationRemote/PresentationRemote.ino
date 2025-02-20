@@ -1,10 +1,14 @@
-
 #include <Arduino.h>
-
-#define IR_RECEIVE_PIN 2
 #include <IRremote.hpp>
 
+#include "Keyboard.h"
 
+
+
+#define IR_RECEIVE_PIN 2
+
+
+// Codes for the buttons on this remote
 #define POWER 0xDC
 
 #define UP 0xCA
@@ -22,43 +26,48 @@
 #define V_NEG 0x81
 
 
-void setup() {
-  Serial.begin(115200);
-  while (!Serial)
-    ;  // Wait for Serial to become available. Is optimized away for some cores.
 
-  // Start the receiver and if not 3. parameter specified, take LED_BUILTIN pin from the internal boards definition as default feedback LED
+void setup()
+{
+  //Serial.begin(115200);
+  
+  // Start IR and keyboard
   IrReceiver.begin(IR_RECEIVE_PIN, false);
+  Keyboard.begin();
 }
 
-void loop() {
-  if (IrReceiver.decode()) {
+void Press(uint8_t key)
+{
+  Keyboard.press(key);
+  Keyboard.releaseAll();
+}
 
-    /*
-    if (IrReceiver.decodedIRData.protocol == UNKNOWN) {
-      Serial.println(F("Received noise or an unknown (or not yet enabled) protocol"));
-      // We have an unknown protocol here, print extended info
-      IrReceiver.printIRResultRawFormatted(&Serial, true);
-      IrReceiver.resume();  // Do it here, to preserve raw data for printing with printIRResultRawFormatted()
-    } else {
-      IrReceiver.resume();  // Early enable receiving of the next IR frame
-      IrReceiver.printIRResultShort(&Serial);
-      IrReceiver.printIRSendUsage(&Serial);
-    }
-    Serial.println();
-    */
-
+void loop()
+{
+  if (IrReceiver.decode())
+  {
+    // Start next batch (not sure if this is necessary? I think so to avoid duplicate data)
     IrReceiver.resume();
 
+    // Ignore if this is a repeat
     if (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT)
-    {
-      Serial.println("Repeat");
-    }
+      return;
 
-    if (IrReceiver.decodedIRData.command == POWER) {
-      Serial.println("Power");
-    } else if (IrReceiver.decodedIRData.command == HOME) {
-      // do something else
-    }
+    uint16_t cmd = IrReceiver.decodedIRData.command;
+
+    if (cmd == RIGHT)
+      Press(KEY_RIGHT_ARROW);
+
+    else if (cmd == LEFT)
+      Press(KEY_LEFT_ARROW);
+
+    else if (cmd == HOME)
+      Press(KEY_HOME);
+
+    else if (cmd == OK)
+      Press(KEY_F5);
+
+    else if (cmd == POWER)
+      Press(KEY_ESC);
   }
 }
