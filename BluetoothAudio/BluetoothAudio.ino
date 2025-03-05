@@ -9,7 +9,7 @@ void setup() {
   audio.begin();
 
   // Re-connects to last connected device
-  audio.reconnect();
+  //audio.reconnect();
 
   int ws = 16;
   int dout = 17;
