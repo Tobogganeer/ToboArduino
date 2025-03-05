@@ -3,32 +3,23 @@
 
 Code for Design Week newspaper
 Uses example MFRC522 code
+For Arduino Nano
 
 Unused at the moment, may be later VVV
 ------- my Pyduino library for serial communication
 -------https://github.com/Tobogganeer/Pyduino
 
-ESP32-C3 pins:
-static const uint8_t SS = 7;
-static const uint8_t MOSI = 6;
-static const uint8_t MISO = 5;
-static const uint8_t SCK = 4;
-
-SS (7) => RFID SDA
-MOSI (6) => RFID MOSI
-MISO (5) => RFID MISO
-SCK (4) => RFID SCK
-3 => RFID RST/Reset
+SS (13) => RFID SDA
+https://github.com/miguelbalboa/rfid
 
 */
 
-#include <Arduino.h>
 #include <SPI.h>
 #include <MFRC522.h>
 //#include <Pyduino.h>
 
-#define RST_PIN 3
-#define SS_PIN 7
+#define RST_PIN 9
+#define SS_PIN 10
 
 #define RESPONSE_BYTE_1 16
 #define RESPONSE_BYTE_2 32
@@ -43,9 +34,7 @@ void setup() {
 
   while (!Serial); // Make sure serial port is opened
 
-
-  // int8_t sck = -1, int8_t miso = -1, int8_t mosi = -1, int8_t ss = -1
-  SPI.begin(4, 5, 6, 7); // SPI bus for rfid reader
+  SPI.begin(); // SPI bus for rfid reader
   mfrc522.PCD_Init();
 }
 
