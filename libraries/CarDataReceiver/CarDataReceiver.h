@@ -4,21 +4,32 @@
 /*
 
 Any module that wants to receive data from the car should pull this in
-Made for ESP8266 modules
+ESP8266/ESP32 modules
 
 */
 
 #include <Arduino.h>
 #include "CarData.h"
 
+// Check if we are running on ESP32
+// Most boards will be ESP8266 but the BT module is ESP32
+#ifndef ARDUINO_ARCH_ESP8266
+#include <esp_now.h>
+#include <esp_wifi.h>
+#else
 #include <ESP8266WiFi.h>
 #include <espnow.h>
+#endif
+
 
 CarData _CDR_internal_data;
 void (*_CDR_internal_callback) (CarData* data);
 
-
+#ifndef ARDUINO_ARCH_ESP8266
+void OnCarDataReceived(const uint8_t * mac, const uint8_t* incomingData, int len) {
+#else
 void OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t len) {
+#endif
     memcpy(&_CDR_internal_data, incomingData, sizeof(CarData));
     _CDR_internal_callback(&_CDR_internal_data);
 }
