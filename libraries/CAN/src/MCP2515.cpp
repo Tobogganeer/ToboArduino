@@ -335,7 +335,10 @@ void MCP2515Class::onReceive(void(*callback)(int))
   pinMode(_intPin, INPUT);
 
   if (callback) {
+    // This is unsupported on ESP8266 - bandaid fix because I'm not using interrupts (Tobogganeer)
+    #ifndef ARDUINO_ARCH_ESP8266
     SPI.usingInterrupt(digitalPinToInterrupt(_intPin));
+    #endif
     attachInterrupt(digitalPinToInterrupt(_intPin), MCP2515Class::onInterrupt, LOW);
   } else {
     detachInterrupt(digitalPinToInterrupt(_intPin));
