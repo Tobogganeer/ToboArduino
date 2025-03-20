@@ -6,6 +6,9 @@ Gets data from CAN and LSCAN buses in car and transmits to other modules with ES
 
 Evan Daveikis
 
+HS: https://docs.google.com/spreadsheets/d/1SKfXAyo6fbAfMUENw1KR3w4Fvx_Ihj6sTPSVXBdOXKk/edit?gid=0#gid=0
+MS: https://docs.google.com/spreadsheets/d/1wjpo5WGLxsswjUi0MUDwKySKp3XejPfE5vdeieBFiGY/edit?gid=0#gid=0
+
 */
 
 #include <CAN.h>
