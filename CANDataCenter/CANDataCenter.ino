@@ -19,7 +19,7 @@ CarData data;
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 // ESP-NOW test code
-// https://randomnerdtutorials.com/esp-now-esp8266-nodemcu-arduino-ide/
+// https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
 unsigned long lastTime = 0;
 unsigned long timerDelay = 2000;  // send readings timer
 
@@ -31,6 +31,8 @@ void setup() {
     ;
 
   initESPNow();
+
+  return;
 
   Serial.println("CAN Receiver Test");
 
@@ -66,6 +68,8 @@ void loop() {
   if ((millis() - lastTime) > timerDelay) {
     sendCarData();
   }
+
+  return;
   
   // try to parse packet
   int packetSize = CAN.parsePacket();
@@ -110,6 +114,10 @@ void sendCarData()
   data.speed = 100;
 
   esp_now_send(broadcastAddress, (uint8_t *) &data, sizeof(data));
+  Serial.print("Sent data. RPM: ");
+  Serial.print(data.rpm);
+  Serial.print(", Speed:");
+  Serial.println(data.speed);
 
   lastTime = millis();
 }

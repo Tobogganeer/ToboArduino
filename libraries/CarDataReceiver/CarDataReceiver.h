@@ -15,10 +15,16 @@ Made for ESP8266 modules
 #include <espnow.h>
 
 CarData _CDR_internal_data;
-void (*dataCallback) (CarData* data) _CDR_internal_callback
+void (*_CDR_internal_callback) (CarData* data);
+
+
+void OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t len) {
+    memcpy(&_CDR_internal_data, incomingData, sizeof(CarData));
+    _CDR_internal_callback(&_CDR_internal_data);
+}
 
 // https://randomnerdtutorials.com/esp-now-esp8266-nodemcu-arduino-ide/
-void initCarDataReceiver(void (*dataCallback) (const CarData* data))
+void initCarDataReceiver(void (*dataCallback) (CarData* data))
 {
     // Set device as a Wi-Fi Station
     WiFi.mode(WIFI_STA);
@@ -34,11 +40,6 @@ void initCarDataReceiver(void (*dataCallback) (const CarData* data))
     esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
     esp_now_register_recv_cb(OnCarDataReceived);
     _CDR_internal_callback = dataCallback;
-}
-
-void OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t len) {
-    memcpy(&_CDR_internal_data, incomingData, sizeof(CarData));
-    _CDR_internal_data(&_CDR_internal_data);
 }
 
 #endif
