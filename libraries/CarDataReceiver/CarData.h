@@ -17,23 +17,37 @@ typedef struct CarData {
 	// Speed
 	uint16_t rpm;
 	uint8_t speed;
+	uint8_t throttlePosition;
+	uint8_t engineLoad;
 
 	// Trip
 	uint32_t odometer;
 	uint16_t currentRunTime;
 
-	// Fuel
-	uint16_t fuelUseLitersPerHour;
-	uint8_t fuelLevel;
+	// Transmission/mechanical
+	bool handbrakeOn;
+	bool reversing;
+	bool clutchDepressed;
+	uint8_t gear;
+	float steeringAngle;
 
-	// Throttle
-	uint8_t throttlePosition;
-	uint8_t engineLoad;
+	// Fuel
+	float fuelEcoInst;
+	float fuelEcoAvg;
+	uint16_t kmRemaining;
+	uint8_t fuelLevel;
 
 	// Temperatures
 	int16_t coolantTemp; // This could be a byte, but I want to avoid all conversions needed
 	int16_t oilTemp;
 	uint16_t oilPressure;
+
+	// Doors
+	bool door_frontDriverOpen;
+	bool door_frontPassengerOpen;
+	bool door_rearDriverOpen;
+	bool door_rearPassengerOpen;
+	bool door_hatchOpen;
 } CarData;
 
 #endif
