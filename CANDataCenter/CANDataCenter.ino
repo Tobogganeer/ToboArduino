@@ -9,6 +9,16 @@ Evan Daveikis
 HS: https://docs.google.com/spreadsheets/d/1SKfXAyo6fbAfMUENw1KR3w4Fvx_Ihj6sTPSVXBdOXKk/edit?gid=0#gid=0
 MS: https://docs.google.com/spreadsheets/d/1wjpo5WGLxsswjUi0MUDwKySKp3XejPfE5vdeieBFiGY/edit?gid=0#gid=0
 
+
+PINOUT:
+D5 -> SCLK (HSCAN and MSCAN)
+D6 -> MISO (HSCAN and MSCAN)
+D7 -> MOSI (HSCAN and MSCAN)
+D3 -> CS (HSCAN)
+D4 -> CS (MSCAN)
+D1 -> INT (HSCAN)
+D2 -> INT (MSCAN)
+
 */
 
 #include <mcp_can.h>
@@ -43,9 +53,11 @@ char msgString[128];
 void setup()
 {
     // Start serial bus (not needed for final build)
-    Serial.begin(115200);
+    Serial.begin(74880);
+
     while (!Serial)
         ;
+
 
     initESPNow();
     initCAN();
@@ -74,7 +86,7 @@ void initCAN()
     pinMode(MSCAN_INT, INPUT_PULLUP);
 
     // Init HSCAN bus, baudrate: 500k@16MHz
-    if (HSCAN.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) == CAN_OK)
+    if (HSCAN.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK)
     {
         Serial.println("HSCAN initialized");
         HSCAN.setMode(MCP_NORMAL);
@@ -82,7 +94,7 @@ void initCAN()
     else Serial.println("HSCAN init fail!");
 
     // Init MSCAN bus, baudrate: 250k@16MHz
-    if (MSCAN.begin(MCP_ANY, CAN_250KBPS, MCP_16MHZ) == CAN_OK)
+    if (MSCAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK)
     {
         Serial.println("MSCAN initialized");
         MSCAN.setMode(MCP_NORMAL);
@@ -101,6 +113,8 @@ void loop()
         sendCarData();
 
     readCAN();
+
+    delay(1);
 }
 
 void readCAN()
@@ -174,10 +188,12 @@ void sendCarData()
     data.speed = 100;
 
     esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(data));
+    /*
     Serial.print("Sent data. RPM: ");
     Serial.print(data.rpm);
     Serial.print(", Speed:");
     Serial.println(data.speed);
+    */
 
     lastDataSendTime = millis();
 }
