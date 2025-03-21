@@ -11,10 +11,8 @@ MS: https://docs.google.com/spreadsheets/d/1wjpo5WGLxsswjUi0MUDwKySKp3XejPfE5vde
 
 */
 
-// TODO: Library seems to include MCP2515 only when using ESP8266
-//   ESP32 includes "ESP32SJA1000.h" instead. This is fine for now?
-//   If switching to ESP32, edit code and include MCP2515 instead
-#include <CAN.h>
+#include <mcp_can.h>
+#include <SPI.h>
 #include <ESP8266WiFi.h>
 #include <espnow.h>
 #include "CarData.h"
@@ -27,6 +25,20 @@ uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 unsigned long lastDataSendTime = 0;
 unsigned long dataSendInterval = 2000;  // ms
 
+// CAN
+MCP_CAN HSCAN(3);  // Normal CAN bus, CS is pin 1
+MCP_CAN MSCAN(4);  // MS/LS CAN bus, CS is pin 2
+
+#define HSCAN_INT 1  // Interrupt pin for normal CAN
+#define MSCAN_INT 2  // Interrupt pin for MS/LS CAN
+
+unsigned long rxId;
+byte len;
+byte rxBuf[8];
+byte txBuf[8];
+
+char msgString[128];
+
 
 void setup()
 {
@@ -36,16 +48,7 @@ void setup()
         ;
 
     initESPNow();
-
-    Serial.println("CAN Receiver Test");
-
-    // Normal CAN bus is 500kbps
-    if (!CAN.begin(500E3))
-    {
-        Serial.println("Starting CAN failed!");
-        while (1)
-            ;
-    }
+    initCAN();
 }
 
 // https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
@@ -61,63 +64,104 @@ void initESPNow()
         return;
     }
 
-    // Once ESPNow is successfully Init, we will register for Send CB to
-    // get the status of Trasnmitted packet
+    // Set ourselves to be the controller/sender
     esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
-    //esp_now_register_send_cb(OnDataSent);
+}
 
-    // Register peer
-    //esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
+void initCAN()
+{
+    pinMode(HSCAN_INT, INPUT_PULLUP);
+    pinMode(MSCAN_INT, INPUT_PULLUP);
+
+    // Init HSCAN bus, baudrate: 500k@16MHz
+    if (HSCAN.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) == CAN_OK)
+    {
+        Serial.println("HSCAN initialized");
+        HSCAN.setMode(MCP_NORMAL);
+    }
+    else Serial.println("HSCAN init fail!");
+
+    // Init MSCAN bus, baudrate: 250k@16MHz
+    if (MSCAN.begin(MCP_ANY, CAN_250KBPS, MCP_16MHZ) == CAN_OK)
+    {
+        Serial.println("MSCAN initialized");
+        MSCAN.setMode(MCP_NORMAL);
+    }
+    else Serial.println("MSCAN init fail!");
+
+    SPI.setClockDivider(SPI_CLOCK_DIV2);  // Set SPI to run at 8MHz (16MHz / 2 = 8 MHz)
+
+    //HSCAN.sendMsgBuf(0x1000000, 1, 8, txBuf0);
 }
 
 
 void loop()
 {
     if ((millis() - lastDataSendTime) > dataSendInterval)
-    {
         sendCarData();
-    }
 
-    return;
+    readCAN();
+}
 
-    // try to parse packet
-    int packetSize = CAN.parsePacket();
+void readCAN()
+{
+    // ======================== HS
+    if (!digitalRead(HSCAN_INT))
+    {  // If interrupt pin is low, read HSCAN receive buffer
+        Serial.println("HSCAN receive buffer:");
+        HSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
+        //CAN1.sendMsgBuf(rxId, 1, len, rxBuf);  // Immediately send message out CAN1 interface
 
-    if (packetSize)
-    {
-        // received a packet
-        Serial.print("Received ");
+        if ((rxId & 0x80000000) == 0x80000000)  // Determine if ID is standard (11 bits) or extended (29 bits)
+            sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
+        else
+            sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
 
-        if (CAN.packetExtended())
-        {
-            Serial.print("extended ");
-        }
+        Serial.print(msgString);
 
-        if (CAN.packetRtr())
-        {
-            // Remote transmission request, packet contains no data
-            Serial.print("RTR ");
-        }
-
-        Serial.print("packet with id 0x");
-        Serial.print(CAN.packetId(), HEX);
-
-        if (CAN.packetRtr())
-        {
-            Serial.print(" and requested length ");
-            Serial.println(CAN.packetDlc());
+        if ((rxId & 0x40000000) == 0x40000000)
+        {  // Determine if message is a remote request frame.
+            sprintf(msgString, " REMOTE REQUEST FRAME");
+            Serial.print(msgString);
         }
         else
         {
-            Serial.print(" and length ");
-            Serial.println(packetSize);
-
-            // only print packet data for non-RTR packets
-            while (CAN.available())
+            for (byte i = 0; i < len; i++)
             {
-                Serial.print((char)CAN.read());
+                sprintf(msgString, " 0x%.2X", rxBuf[i]);
+                Serial.print(msgString);
             }
-            Serial.println();
+        }
+
+        Serial.println();
+    }
+
+    // ======================== MS
+    if (!digitalRead(MSCAN_INT))
+    {  // If interrupt pin is low, read MSCAN receive buffer
+        Serial.println("MSCAN receive buffer:");
+        MSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
+        //CAN0.sendMsgBuf(rxId, 1, len, rxBuf);  // Immediately send message out CAN0 interface
+
+        if ((rxId & 0x80000000) == 0x80000000)  // Determine if ID is standard (11 bits) or extended (29 bits)
+            sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
+        else
+            sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
+
+        Serial.print(msgString);
+
+        if ((rxId & 0x40000000) == 0x40000000)
+        {  // Determine if message is a remote request frame.
+            sprintf(msgString, " REMOTE REQUEST FRAME");
+            Serial.print(msgString);
+        }
+        else
+        {
+            for (byte i = 0; i < len; i++)
+            {
+                sprintf(msgString, " 0x%.2X", rxBuf[i]);
+                Serial.print(msgString);
+            }
         }
 
         Serial.println();
