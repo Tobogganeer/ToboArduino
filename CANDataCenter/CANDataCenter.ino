@@ -11,32 +11,31 @@ MS: https://docs.google.com/spreadsheets/d/1wjpo5WGLxsswjUi0MUDwKySKp3XejPfE5vde
 
 */
 
+// TODO: Library seems to include MCP2515 only when using ESP8266
+//   ESP32 includes "ESP32SJA1000.h" instead. This is fine for now?
+//   If switching to ESP32, edit code and include MCP2515 instead
 #include <CAN.h>
 #include <ESP8266WiFi.h>
 #include <espnow.h>
 #include "CarData.h"
-//#include "CarDataReceiver.h"
 
 
 CarData data;
 uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
-// ESP-NOW test code
-// https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
-unsigned long lastTime = 0;
-unsigned long timerDelay = 2000;  // send readings timer
+// Sending data over ESP-NOW
+unsigned long lastDataSendTime = 0;
+unsigned long dataSendInterval = 2000;  // ms
 
 
-// From example code
 void setup()
 {
+    // Start serial bus (not needed for final build)
     Serial.begin(115200);
     while (!Serial)
         ;
 
     initESPNow();
-
-    return;
 
     Serial.println("CAN Receiver Test");
 
@@ -49,6 +48,7 @@ void setup()
     }
 }
 
+// https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
 void initESPNow()
 {
     // Set device as a Wi-Fi Station
@@ -73,7 +73,7 @@ void initESPNow()
 
 void loop()
 {
-    if ((millis() - lastTime) > timerDelay)
+    if ((millis() - lastDataSendTime) > dataSendInterval)
     {
         sendCarData();
     }
@@ -135,5 +135,5 @@ void sendCarData()
     Serial.print(", Speed:");
     Serial.println(data.speed);
 
-    lastTime = millis();
+    lastDataSendTime = millis();
 }
