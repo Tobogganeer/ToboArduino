@@ -36,8 +36,8 @@ unsigned long lastDataSendTime = 0;
 unsigned long dataSendInterval = 2000;  // ms
 
 // CAN
-MCP_CAN HSCAN(3);  // Normal CAN bus, CS is pin 1
-MCP_CAN MSCAN(4);  // MS/LS CAN bus, CS is pin 2
+MCP_CAN HSCAN(0);  // Normal CAN bus, CS is pin 3 (GPIO0)
+MCP_CAN MSCAN(2);  // MS/LS CAN bus, CS is pin 4 (GPIO2)
 
 #define HSCAN_INT 1  // Interrupt pin for normal CAN
 #define MSCAN_INT 2  // Interrupt pin for MS/LS CAN
@@ -53,7 +53,7 @@ char msgString[128];
 void setup()
 {
     // Start serial bus (not needed for final build)
-    Serial.begin(74880);
+    Serial.begin(921600);
 
     while (!Serial)
         ;
@@ -112,20 +112,27 @@ void loop()
     if ((millis() - lastDataSendTime) > dataSendInterval)
         sendCarData();
 
-    //readCAN();
+    readCAN();
 
     delay(1);
 }
 
 void readCAN()
 {
+    
     // ======================== HS
     if (!digitalRead(HSCAN_INT))
     {  // If interrupt pin is low, read HSCAN receive buffer
-        Serial.println("HSCAN receive buffer:");
+        
+        //Serial.println("HSCAN receive buffer:");
         HSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
+        if (rxId == 0x201)
+        {
+            Serial.println("Got RPM");
+        }
         //CAN1.sendMsgBuf(rxId, 1, len, rxBuf);  // Immediately send message out CAN1 interface
 
+        /*
         if ((rxId & 0x80000000) == 0x80000000)  // Determine if ID is standard (11 bits) or extended (29 bits)
             sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
         else
@@ -148,11 +155,13 @@ void readCAN()
         }
 
         Serial.println();
+        */
     }
 
     // ======================== MS
     if (!digitalRead(MSCAN_INT))
     {  // If interrupt pin is low, read MSCAN receive buffer
+    /*
         Serial.println("MSCAN receive buffer:");
         MSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
         //CAN0.sendMsgBuf(rxId, 1, len, rxBuf);  // Immediately send message out CAN0 interface
@@ -179,6 +188,7 @@ void readCAN()
         }
 
         Serial.println();
+        */
     }
 }
 
