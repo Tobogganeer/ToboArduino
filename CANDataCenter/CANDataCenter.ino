@@ -112,7 +112,7 @@ void loop()
     if ((millis() - lastDataSendTime) > dataSendInterval)
         sendCarData();
 
-    readCAN();
+    //readCAN();
 
     delay(1);
 }
@@ -188,12 +188,12 @@ void sendCarData()
     data.speed = 100;
 
     esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(data));
-    /*
+    
     Serial.print("Sent data. RPM: ");
     Serial.print(data.rpm);
     Serial.print(", Speed:");
     Serial.println(data.speed);
-    */
+    
 
     lastDataSendTime = millis();
 }
