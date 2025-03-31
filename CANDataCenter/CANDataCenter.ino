@@ -33,7 +33,7 @@ uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
 // Sending data over ESP-NOW
 unsigned long lastDataSendTime = 0;
-unsigned long dataSendInterval = 2000;  // ms
+unsigned long dataSendInterval = 100;  // ms
 
 // CAN
 MCP_CAN HSCAN(0);  // Normal CAN bus, CS is pin 3 (GPIO0)
@@ -45,24 +45,18 @@ MCP_CAN MSCAN(2);  // MS/LS CAN bus, CS is pin 4 (GPIO2)
 unsigned long rxId;
 byte len;
 byte rxBuf[8];
-//byte txBuf[8];
-byte txData[] = {0x02,0x01,0x00,0x55,0x55,0x55,0x55,0x55};
+byte txBuf[8];
 
 char msgString[128];
-
-#define LISTEN_ID 0x7EA
-#define REPLY_ID 0x7E0
-#define FUNCTIONAL_ID 0x7DF
 
 
 void setup()
 {
     // Start serial bus (not needed for final build)
-    Serial.begin(921600);
+    Serial.begin(115200);
 
     while (!Serial)
         ;
-
 
     initESPNow();
     initCAN();
@@ -118,13 +112,10 @@ void loop()
         sendCarData();
 
     readCAN();
-
-    //delay(1);
 }
 
 void readCAN()
 {
-
     // ======================== HS
     if (!digitalRead(HSCAN_INT))
     //if (HSCAN.checkReceive() == CAN_MSGAVAIL)
@@ -132,13 +123,10 @@ void readCAN()
 
         //Serial.println("HSCAN receive buffer:");
         HSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
-        if (rxId == 0x201)
-        {
-            Serial.println("Got RPM");
-        }
+        handleHSMessage();
         //CAN1.sendMsgBuf(rxId, 1, len, rxBuf);  // Immediately send message out CAN1 interface
 
-        
+
         if ((rxId & 0x80000000) == 0x80000000)  // Determine if ID is standard (11 bits) or extended (29 bits)
             sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
         else
@@ -161,7 +149,6 @@ void readCAN()
         }
 
         Serial.println();
-        
     }
 
     // ======================== MS
@@ -169,11 +156,9 @@ void readCAN()
     //if (MSCAN.checkReceive() == CAN_MSGAVAIL)
     {  // If interrupt pin is low, read MSCAN receive buffer
 
-        //MSCAN.readMsgBuf(&rxId, &len, rxBuf);  // DELETE WHEN UNCOMMENTING
-
-        
         Serial.println("MSCAN receive buffer:");
         MSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
+        handleMSMessage();
         //CAN0.sendMsgBuf(rxId, 1, len, rxBuf);  // Immediately send message out CAN0 interface
 
         if ((rxId & 0x80000000) == 0x80000000)  // Determine if ID is standard (11 bits) or extended (29 bits)
@@ -198,8 +183,29 @@ void readCAN()
         }
 
         Serial.println();
+    }
+}
+
+void handleHSMessage()
+{
+    // rxId, rxBuf
+    if (rxId == 0x190)
+    {
+        // B1-2: Throttle
+        // B3-b7: Brakes on
+        // B3-b5: Clutch on
+
         
     }
+    if (rxId == 0x201)
+    {
+        Serial.println("Got RPM");
+    }
+}
+
+void handleMSMessage()
+{
+    // rxId, rxBuf
 }
 
 void sendCarData()
@@ -216,11 +222,16 @@ void sendCarData()
     Serial.println(data.speed);
     */
 
-    if(HSCAN.sendMsgBuf(FUNCTIONAL_ID, 8, txData) == CAN_OK){
-      Serial.println("PID req sent");
-    } else {
-      Serial.println("PID req error");
+    /*
+    if (HSCAN.sendMsgBuf(FUNCTIONAL_ID, 8, txData) == CAN_OK)
+    {
+        Serial.println("PID req sent");
     }
+    else
+    {
+        Serial.println("PID req error");
+    }
+    */
 
 
     lastDataSendTime = millis();
