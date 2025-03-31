@@ -116,20 +116,63 @@ void readCAN()
 {
     // Check for HSCAN data
     if (!digitalRead(HSCAN_INT))
-    {                                          
+    {
         HSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
         handleHSMessage();
     }
 
     // Check for MSCAN data
     if (!digitalRead(MSCAN_INT))
-    {  
+    {
 
         MSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
         handleMSMessage();
     }
 }
 
+/*
+
+bool bt_forward;
+	bool bt_reverse;
+	bool bt_pause;
+
+	// === CAR INFO ===
+	// Speed
+	uint16_t rpm;
+	uint8_t speed;
+	uint8_t throttlePosition;
+	uint8_t engineLoad;
+
+	// Trip
+	uint32_t odometer;
+	uint16_t currentRunTime;
+
+	// Transmission/mechanical
+	bool handbrakeOn;
+	bool reversing;
+	bool clutchDepressed;
+	uint8_t gear;
+	float steeringAngle;
+
+	// Fuel
+	float fuelEcoInst;
+	float fuelEcoAvg;
+	uint16_t kmRemaining;
+	uint8_t fuelLevel;
+
+	// Temperatures
+	int16_t coolantTemp; // This could be a byte, but I want to avoid all conversions needed
+	int16_t oilTemp;
+	uint16_t oilPressure;
+
+	// Doors
+	bool door_frontDriverOpen;
+	bool door_frontPassengerOpen;
+	bool door_rearDriverOpen;
+	bool door_rearPassengerOpen;
+	bool door_hatchOpen;
+
+*/
 
 void handleHSMessage()
 {
@@ -142,8 +185,45 @@ void handleHSMessage()
     }
     if (rxId == 0x201)
     {
-        Serial.println("Got RPM");
+        // B1-2: RPM,
+        // B3-4: Engine torque?
+        // B5-6: Vehicle speed,
+        // B7: Accelerator pedal
     }
+    if (rxId == 0x231)
+    {
+        // B1: Gear:
+        //  0x00 = Neutral (vechicle moving), 0x01 = Neutral (vehicle stopped), 0xE1 = Reverse,
+        //  0x11 = 1st, 0x20 = 2nd, 0x30 = 3rt, 0x40 = 4th, 0x50 = 5th
+        // B7: 80 = In gear, C0 = Out of gear
+    }
+    if (rxId == 0x420)
+    {
+        // B1: Engine oil temperature?
+        // B2: Distance (0,2m resolution – resets every 51m)
+        // B3: Fuel consumption (cumulative)
+    }
+    if (rxId == 0x430)
+    {
+        // B1: Fuel level. 1 unit = 0,25l
+        // B2: Fuel tank sensor (?)
+    }
+    if (rxId == 0x433)
+    {
+        // B1: Doors. Ex. front left door open: 0x80, trunk open: 0x08
+        // B4: bit1 = hand brake, bit2 = reverse gear
+    }
+    if (rxId == 0x4DA)
+    {
+        // B1-2: Steering angle. Values from about 0x6958 (all way left) to about 0x96A8 all way right).
+        // Can have offset, because when turning on dashboard it always resets to zero, regardless of the effective steering angle position.
+    }
+    /*
+    if (rxId == 0x)
+    {
+        
+    }
+    */
 }
 
 
