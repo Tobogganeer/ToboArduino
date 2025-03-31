@@ -45,7 +45,7 @@ MCP_CAN MSCAN(2);  // MS/LS CAN bus, CS is pin 4 (GPIO2)
 unsigned long rxId;
 byte len;
 byte rxBuf[8];
-//byte txBuf[8];
+byte txBuf[8];
 
 
 void setup()
@@ -130,6 +130,12 @@ void readCAN()
     }
 }
 
+void sendCANMessage(MCP_CAN bus, unsigned long id)
+{
+    // id, extended, length, data
+    bus.sendMsgBuf(id, 0, 8, txBuf);
+}
+
 /*
 
 bool bt_forward;
@@ -200,6 +206,7 @@ void handleHSMessage()
     if (rxId == 0x420)
     {
         // B1: Engine oil temperature?
+        // Probably actually coolant temp - (B1 - 40 = degrees celsius)
         // B2: Distance (0,2m resolution – resets every 51m)
         // B3: Fuel consumption (cumulative)
     }
@@ -218,18 +225,78 @@ void handleHSMessage()
         // B1-2: Steering angle. Values from about 0x6958 (all way left) to about 0x96A8 all way right).
         // Can have offset, because when turning on dashboard it always resets to zero, regardless of the effective steering angle position.
     }
-    /*
-    if (rxId == 0x)
+    if (rxId == 0x4F2)
     {
-        
+        // B2-3: Odometer
+        // Might be first byte too to get the range
     }
-    */
 }
 
 
 void handleMSMessage()
 {
     // rxId, rxBuf
+
+    if (rxId == 0x290)
+    {
+        // B2-8: First half of display, ASCII
+    }
+    if (rxId == 0x291)
+    {
+        // B2-8: Second half of display, ASCII
+    }
+    if (rxId == 0x400)
+    {
+        // B1-2: Average speed (km/h). Might be one byte only
+        // B3-4: Inst. fuel consumption L/100km (x/10, FFF3 = ---)
+        // B5-6: Avg. fuel consumption L/100km (x/10). May be one byte only
+        // B7-8: Distance in KM remaining
+    }
+    if (rxId == 0x420)
+    {
+        // B1: Engine coolant temperature (B1 - 40 = degrees celsius)
+    }
+    if (rxId == 0x28F)
+    {
+        // LCD Display
+        /*
+        B1-b8: always 1
+        B1-b7: “CD IN” symbol
+        B1-b6: “MD IN” symbol
+        B1-b5: “ST” symbol
+        B1-b4: Dolby symbol
+        B1-b3: “RPT” symbol
+        B1-b2: “RDM” symbol
+        B1-b1: “AF” symbol
+
+        B2-b8: “PTY” symbol
+        B2-b7: “TA” symbol
+        B2-b6: “TP” symbol
+        B2-b5: “AUTO-M” symbol
+        B2-b4-1: Always 0
+
+        B3: 0x00
+
+        B4-b8-7: 0
+        B4-b6: Symbol “:” between 3rd and 4th character
+        B4-b5: Symbol “ ‘ ” between 11th and 12th character
+        B4-b4: 0
+        B4-b3: Symbol “.” between 11th and 12th character
+        B4-b2: Symbol “.” between 10th and 11th character
+        B4-b1: 1 when turing on radio
+
+        B5-b8: Changes when clicking buttons or rotating knobs
+        B5-b7: 0 fixed
+        B5-b6: 1 fixed
+        B5-b5: 1 = “Clock” button
+        B5-b4: 1 = “Info” button (trip computer)
+        B5-b3: Always 0
+        B5-b2: Send at least 3 times 1 to enable LCD test (all symbols showed)
+        B5-b1: Always 0
+
+        B6-8: Always 0x000000
+        */
+    }
 }
 
 
