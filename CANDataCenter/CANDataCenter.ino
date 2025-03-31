@@ -45,9 +45,7 @@ MCP_CAN MSCAN(2);  // MS/LS CAN bus, CS is pin 4 (GPIO2)
 unsigned long rxId;
 byte len;
 byte rxBuf[8];
-byte txBuf[8];
-
-char msgString[128];
+//byte txBuf[8];
 
 
 void setup()
@@ -101,9 +99,9 @@ void initCAN()
     else Serial.println("MSCAN init fail!");
 
     SPI.setClockDivider(SPI_CLOCK_DIV2);  // Set SPI to run at 8MHz (16MHz / 2 = 8 MHz)
-
-    //HSCAN.sendMsgBuf(0x1000000, 1, 8, txBuf0);
 }
+
+
 
 
 void loop()
@@ -116,75 +114,22 @@ void loop()
 
 void readCAN()
 {
-    // ======================== HS
+    // Check for HSCAN data
     if (!digitalRead(HSCAN_INT))
-    //if (HSCAN.checkReceive() == CAN_MSGAVAIL)
-    {  // If interrupt pin is low, read HSCAN receive buffer
-
-        //Serial.println("HSCAN receive buffer:");
+    {                                          
         HSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
         handleHSMessage();
-        //CAN1.sendMsgBuf(rxId, 1, len, rxBuf);  // Immediately send message out CAN1 interface
-
-
-        if ((rxId & 0x80000000) == 0x80000000)  // Determine if ID is standard (11 bits) or extended (29 bits)
-            sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
-        else
-            sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
-
-        Serial.print(msgString);
-
-        if ((rxId & 0x40000000) == 0x40000000)
-        {  // Determine if message is a remote request frame.
-            sprintf(msgString, " REMOTE REQUEST FRAME");
-            Serial.print(msgString);
-        }
-        else
-        {
-            for (byte i = 0; i < len; i++)
-            {
-                sprintf(msgString, " 0x%.2X", rxBuf[i]);
-                Serial.print(msgString);
-            }
-        }
-
-        Serial.println();
     }
 
-    // ======================== MS
+    // Check for MSCAN data
     if (!digitalRead(MSCAN_INT))
-    //if (MSCAN.checkReceive() == CAN_MSGAVAIL)
-    {  // If interrupt pin is low, read MSCAN receive buffer
+    {  
 
-        Serial.println("MSCAN receive buffer:");
         MSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
         handleMSMessage();
-        //CAN0.sendMsgBuf(rxId, 1, len, rxBuf);  // Immediately send message out CAN0 interface
-
-        if ((rxId & 0x80000000) == 0x80000000)  // Determine if ID is standard (11 bits) or extended (29 bits)
-            sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
-        else
-            sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
-
-        Serial.print(msgString);
-
-        if ((rxId & 0x40000000) == 0x40000000)
-        {  // Determine if message is a remote request frame.
-            sprintf(msgString, " REMOTE REQUEST FRAME");
-            Serial.print(msgString);
-        }
-        else
-        {
-            for (byte i = 0; i < len; i++)
-            {
-                sprintf(msgString, " 0x%.2X", rxBuf[i]);
-                Serial.print(msgString);
-            }
-        }
-
-        Serial.println();
     }
 }
+
 
 void handleHSMessage()
 {
@@ -194,8 +139,6 @@ void handleHSMessage()
         // B1-2: Throttle
         // B3-b7: Brakes on
         // B3-b5: Clutch on
-
-        
     }
     if (rxId == 0x201)
     {
@@ -203,10 +146,12 @@ void handleHSMessage()
     }
 }
 
+
 void handleMSMessage()
 {
     // rxId, rxBuf
 }
+
 
 void sendCarData()
 {
@@ -214,25 +159,6 @@ void sendCarData()
     data.speed = 100;
 
     esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(data));
-
-    /*
-    Serial.print("Sent data. RPM: ");
-    Serial.print(data.rpm);
-    Serial.print(", Speed:");
-    Serial.println(data.speed);
-    */
-
-    /*
-    if (HSCAN.sendMsgBuf(FUNCTIONAL_ID, 8, txData) == CAN_OK)
-    {
-        Serial.println("PID req sent");
-    }
-    else
-    {
-        Serial.println("PID req error");
-    }
-    */
-
 
     lastDataSendTime = millis();
 }
