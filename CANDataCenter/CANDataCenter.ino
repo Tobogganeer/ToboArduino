@@ -188,9 +188,15 @@ void handleHSMessage()
         // B1-2: Throttle
         // B3-b7: Brakes on
         // B3-b5: Clutch on
+        Serial.print("Brakes: ");
+        Serial.println(rxBuf[2] & 0b01000000); // WORKS
+        Serial.print("Clutch: ");
+        Serial.println(rxBuf[2] & 0b00010000); // NOT DETECTING ANYTHING
     }
     if (rxId == 0x201)
     {
+        Serial.print("RPM: ");
+        Serial.println((((uint16_t)rxBuf[0]) << 8) + rxBuf[1]);
         // B1-2: RPM,
         // B3-4: Engine torque?
         // B5-6: Vehicle speed,
@@ -198,6 +204,14 @@ void handleHSMessage()
     }
     if (rxId == 0x231)
     {
+        Serial.print("Gear: "); // NEVER CHANGES, ALWAYS 0x01
+
+        char msgString[4];
+        sprintf(msgString, "0x%.2X", rxBuf[0]);
+        Serial.println(msgString);
+
+        //Serial.println(rxBuf[0]);
+
         // B1: Gear:
         //  0x00 = Neutral (vechicle moving), 0x01 = Neutral (vehicle stopped), 0xE1 = Reverse,
         //  0x11 = 1st, 0x20 = 2nd, 0x30 = 3rt, 0x40 = 4th, 0x50 = 5th
@@ -217,6 +231,10 @@ void handleHSMessage()
     }
     if (rxId == 0x433)
     {
+        Serial.print("Doors: ");
+         char msgString[4];
+        sprintf(msgString, "0x%.2X", rxBuf[0]);
+        Serial.println(msgString); // ALWAYS GETTING 0 SO FAR, TRY AGAIN WITH HEX?
         // B1: Doors. Ex. front left door open: 0x80, trunk open: 0x08
         // B4: bit1 = hand brake, bit2 = reverse gear
     }
