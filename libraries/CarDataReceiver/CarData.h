@@ -28,6 +28,7 @@ typedef struct CarData {
 	bool handbrakeOn;
 	bool reversing;
 	bool clutchDepressed;
+	bool brakePressed;
 	uint8_t gear;
 	float steeringAngle;
 

@@ -48,6 +48,20 @@ byte rxBuf[8];
 byte txBuf[8];
 
 
+
+// Convertors from bytes to values
+union Convertor
+{
+    int32_t intVal;
+    uint32_t uintVal;
+    int16_t shortVal;
+    uint16_t ushortVal;
+
+    byte bytes[4];
+};
+
+
+
 void setup()
 {
     // Start serial bus (not needed for final build)
@@ -157,6 +171,7 @@ bool bt_forward;
 	bool handbrakeOn;
 	bool reversing;
 	bool clutchDepressed;
+    bool brakePressed;
 	uint8_t gear;
 	float steeringAngle;
 
@@ -188,15 +203,21 @@ void handleHSMessage()
         // B1-2: Throttle
         // B3-b7: Brakes on
         // B3-b5: Clutch on
-        Serial.print("Brakes: ");
-        Serial.println(rxBuf[2] & 0b01000000); // WORKS
+        data.brakePressed = (rxBuf[2] & 0b01000000) > 0;
+
         Serial.print("Clutch: ");
-        Serial.println(rxBuf[2] & 0b00010000); // NOT DETECTING ANYTHING
+        //Serial.println(rxBuf[2] & 0b00010000);  // NOT DETECTING ANYTHING
+        printBits(rxBuf[2]);
+        Serial.println();
     }
     if (rxId == 0x201)
     {
         Serial.print("RPM: ");
-        Serial.println((((uint16_t)rxBuf[0]) << 8) + rxBuf[1]);
+        Serial.print((((uint16_t)rxBuf[0]) << 8) + rxBuf[1]);
+        Serial.print(" - 01 ");
+        Serial.println(convert(rxBuf[0], rxBuf[1]).ushortVal);
+        Serial.print(" - 10 ");
+        Serial.println(convert(rxBuf[1], rxBuf[0]).ushortVal);
         // B1-2: RPM,
         // B3-4: Engine torque?
         // B5-6: Vehicle speed,
@@ -204,7 +225,7 @@ void handleHSMessage()
     }
     if (rxId == 0x231)
     {
-        Serial.print("Gear: "); // NEVER CHANGES, ALWAYS 0x01
+        Serial.print("Gear: ");  // NEVER CHANGES, ALWAYS 0x01
 
         char msgString[4];
         sprintf(msgString, "0x%.2X", rxBuf[0]);
@@ -226,15 +247,17 @@ void handleHSMessage()
     }
     if (rxId == 0x430)
     {
-        // B1: Fuel level. 1 unit = 0,25l
+        // B1: Fuel level. 1 unit = 0,25l - 60.25L total (241 steps)
         // B2: Fuel tank sensor (?)
     }
     if (rxId == 0x433)
     {
         Serial.print("Doors: ");
-         char msgString[4];
-        sprintf(msgString, "0x%.2X", rxBuf[0]);
-        Serial.println(msgString); // ALWAYS GETTING 0 SO FAR, TRY AGAIN WITH HEX?
+        printBits(rxBuf[0]);
+        Serial.println();
+        //char msgString[4];
+        //sprintf(msgString, "0x%.2X", rxBuf[0]);
+        //Serial.println(msgString);  // ALWAYS GETTING 0 SO FAR, TRY AGAIN WITH HEX?
         // B1: Doors. Ex. front left door open: 0x80, trunk open: 0x08
         // B4: bit1 = hand brake, bit2 = reverse gear
     }
@@ -326,4 +349,47 @@ void sendCarData()
     esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(data));
 
     lastDataSendTime = millis();
+}
+
+
+
+
+
+
+
+
+
+// ====================================================== UTIL ======================================================
+
+Convertor convert(byte b1, byte b2)
+{
+    Convertor conv;
+    conv.bytes[0] = b1;
+    conv.bytes[1] = b2;
+    return conv;
+}
+
+Convertor convert(byte b1, byte b2, byte b3, byte b4)
+{
+    Convertor conv;
+    conv.bytes[0] = b1;
+    conv.bytes[1] = b2;
+    conv.bytes[2] = b3;
+    conv.bytes[3] = b4;
+    return conv;
+}
+
+void printBits(byte val)
+{
+    char msgString[8];
+    sprintf(msgString, "%c%c%c%c%c%c%c%c",
+            ((val)&0x80 ? '1' : '0'),
+            ((val)&0x40 ? '1' : '0'),
+            ((val)&0x20 ? '1' : '0'),
+            ((val)&0x10 ? '1' : '0'),
+            ((val)&0x08 ? '1' : '0'),
+            ((val)&0x04 ? '1' : '0'),
+            ((val)&0x02 ? '1' : '0'),
+            ((val)&0x01 ? '1' : '0'));
+    Serial.print(msgString);
 }
