@@ -1,0 +1,21 @@
+#######################################
+# Syntax Coloring Map SPI
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+CarData	KEYWORD1
+CarDataID	KEYWORD2
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+initCarDataReceiver	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+ID_BTSKIP	LITERAL1
+ID_CARINFO	LITERAL1
