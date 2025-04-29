@@ -1,0 +1,56 @@
+/////////////////////////////////////////////////////////////////
+
+#include "Rotary.h"
+
+/////////////////////////////////////////////////////////////////
+
+#define ROTARY_PIN1 5
+#define ROTARY_PIN2 4
+
+#define CLICKS_PER_STEP 4   // this number depends on your rotary encoder
+#define MIN_POS         4
+#define MAX_POS         20
+#define START_POS       10
+#define INCREMENT       2   // this number is the counter increment on each step
+
+/////////////////////////////////////////////////////////////////
+
+Rotary r;
+
+/////////////////////////////////////////////////////////////////
+
+void setup() {
+  Serial.begin(9600);
+  delay(50);
+
+  r.begin(ROTARY_PIN1, ROTARY_PIN2, CLICKS_PER_STEP, MIN_POS, MAX_POS, START_POS, INCREMENT);
+  r.setChangedHandler(rotate);
+  r.setLeftRotationHandler(showDirection);
+  r.setRightRotationHandler(showDirection);
+
+  Serial.println("\n\nRanged Counter");
+  Serial.println("You can only set values between " + String(MIN_POS) + " and " + String(MAX_POS) +".");
+  Serial.print("Increment: ");
+  Serial.println(r.getIncrement());
+  Serial.print("Current position: ");
+  Serial.println(r.getPosition());
+  Serial.println();
+}
+
+void loop() {
+  r.loop();
+}
+
+/////////////////////////////////////////////////////////////////
+
+// on change
+void rotate(Rotary& r) {
+   Serial.println(r.getPosition());
+}
+
+// on left or right rotation
+void showDirection(Rotary& r) {
+  Serial.println(r.directionToString(r.getDirection()));
+}
+
+/////////////////////////////////////////////////////////////////
