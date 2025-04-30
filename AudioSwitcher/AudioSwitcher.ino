@@ -11,8 +11,8 @@ Outline:
 
 ESP8266 Wiring:
 
-D3 (GPIO0): Right side rotary encoder
-D4 (GPIO2): Left side rotary encoder
+D3 (GPIO0): Left side rotary encoder
+D4 (GPIO2): Right side rotary encoder
 GND: Middle rotary encoder
 
 D1 (GPIO5): SCL (I2C)
@@ -48,50 +48,31 @@ AUX audio select:
 #define ROTARY_PIN1 2
 #define ROTARY_PIN2 0
 
-#define CLICKS_PER_STEP 4   // this number depends on your rotary encoder
-#define MIN_POS         4
-#define MAX_POS         20
-#define START_POS       10
-#define INCREMENT       2   // this number is the counter increment on each step
+#define CLICKS_PER_ROTATION 4 // The encoder outputs 4 times when rotated once
 
-/////////////////////////////////////////////////////////////////
+Rotary dial;
 
-Rotary r;
 
-/////////////////////////////////////////////////////////////////
 
 void setup() {
   Serial.begin(9600);
   delay(50);
 
-  r.begin(ROTARY_PIN1, ROTARY_PIN2, CLICKS_PER_STEP, MIN_POS, MAX_POS, START_POS, INCREMENT);
-  r.setChangedHandler(rotate);
-  r.setLeftRotationHandler(showDirection);
-  r.setRightRotationHandler(showDirection);
-
-  Serial.println("\n\nRanged Counter");
-  Serial.println("You can only set values between " + String(MIN_POS) + " and " + String(MAX_POS) +".");
-  Serial.print("Increment: ");
-  Serial.println(r.getIncrement());
-  Serial.print("Current position: ");
-  Serial.println(r.getPosition());
-  Serial.println();
+  dial.begin(ROTARY_PIN1, ROTARY_PIN2, CLICKS_PER_ROTATION);
+  dial.setLeftRotationHandler(rotateLeft);
+  dial.setRightRotationHandler(rotateRight);
 }
 
 void loop() {
-  r.loop();
+  dial.loop();
 }
 
-/////////////////////////////////////////////////////////////////
-
-// on change
-void rotate(Rotary& r) {
-   Serial.println(r.getPosition());
+void rotateLeft(Rotary& dial)
+{
+    Serial.println("Left");
 }
 
-// on left or right rotation
-void showDirection(Rotary& r) {
-  Serial.println(r.directionToString(r.getDirection()));
+void rotateRight(Rotary& dial)
+{
+    Serial.println("Right");
 }
-
-/////////////////////////////////////////////////////////////////
