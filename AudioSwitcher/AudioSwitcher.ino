@@ -44,35 +44,65 @@ AUX audio select:
 */
 
 #include "Rotary.h"
+#include <U8g2lib.h>
+#include <Wire.h>
 
 #define ROTARY_PIN1 2
 #define ROTARY_PIN2 0
 
-#define CLICKS_PER_ROTATION 4 // The encoder outputs 4 times when rotated once
+#define CLICKS_PER_ROTATION 4  // The encoder outputs 4 times when rotated once
 
 Rotary dial;
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
+
+bool displayDirty;
+
+enum : byte {
+  Bluetooth,
+  AuxPort,
+  Lightning,
+  USB_C,
+  Carputer
+} audioSource = Bluetooth;
+
+const byte LAST_AUDIOSOURCE = Carputer;  // Used to loop back around
 
 
 
 void setup() {
-  Serial.begin(9600);
-  delay(50);
-
   dial.begin(ROTARY_PIN1, ROTARY_PIN2, CLICKS_PER_ROTATION);
   dial.setLeftRotationHandler(rotateLeft);
   dial.setRightRotationHandler(rotateRight);
+
+  u8g2.begin();
 }
 
 void loop() {
   dial.loop();
+
+  if (displayDirty) {
+    updateScreen();
+    displayDirty = false;
+  }
 }
 
-void rotateLeft(Rotary& dial)
-{
-    Serial.println("Left");
+void updateScreen() {
+  u8g2.clearBuffer();                   // clear the internal memory
+  u8g2.setFont(u8g2_font_ncenB08_tr);   // choose a suitable font
+  u8g2.drawStr(0, 10, "Hello World!");  // write something to the internal memory
+  u8g2.sendBuffer();                    // transfer internal memory to the display
 }
 
-void rotateRight(Rotary& dial)
-{
-    Serial.println("Right");
+void rotateLeft(Rotary& dial) {
+  audioSource--;
+  if (audioSource < 0)
+    audioSource = LAST_AUDIOSOURCE;
+  displayDirty = true;
+}
+
+void rotateRight(Rotary& dial) {
+  audioSource++;
+  if (audioSource > LAST_AUDIOSOURCE)
+    audioSource = 0;
+  displayDirty = true;
 }

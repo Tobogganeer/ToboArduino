@@ -1,0 +1,20 @@
+OLED
+0.91in OLED 128x32: == 1 ==, white
+0.96in OLED 128x64: == 4 ==, blue x2, white, blue & yellow
+1.30in OLED 128x64: == 1 ==, blue
+1.54in OLED 128x64: == 2 ==, white x2
+2.42in OLED 128x64: == 1 ==, white
+
+TFT LCD
+1.8in LCD 128x160: == 1 ==, full colour
+
+Character LCD
+16x2: == 2 ==, green x2
+20x4: == 1 ==, blue
+
+
+
+ASSIGNMENTS:
+20x4 LCD: Bluetooth details
+1.54in OLED: Car stats (coolant etc) & Reverse proximity
+
