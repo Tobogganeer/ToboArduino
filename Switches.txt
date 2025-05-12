@@ -1,0 +1,17 @@
+-- Power switches:
+Carputer power
+CB radio power
+USB ports
+HUD
+Reverse beeper (small switch)
+Info display (small switch)
+Gear indicator (small switch)
+Bluetooth (small switch)
+
+-- Buttons:
+Data sender (reset, power to NC)
+Second horn
+
+-- Dials:
+Audio switcher
+Info display

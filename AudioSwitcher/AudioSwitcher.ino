@@ -427,6 +427,16 @@ const byte LAST_AUDIOSOURCE = Carputer;  // Used to loop back around
 
 
 
+
+
+// TODO: Save last used source in preferences
+
+
+
+
+
+
+
 void setup() {
   dial.begin(ROTARY_PIN1, ROTARY_PIN2, CLICKS_PER_ROTATION);
   dial.setLeftRotationHandler(rotateLeft);
