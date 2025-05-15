@@ -33,7 +33,7 @@ def readData():
     timestr = time.strftime("%Y_%m_%d-%H_%M_%S")
     running = True
     with open("log_" + timestr + ".csv", "w") as f:
-        f.write("timestamp,bus,data\n")
+        f.write("timestamp,bus,id,len,b7,b6,b5,b4,b3,b2,b1,b0\n")
         while running:
             line = arduino.readline().decode().strip()
             if line:

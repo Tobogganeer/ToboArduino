@@ -27,6 +27,7 @@ D2 -> INT (MSCAN)
 #include <espnow.h>
 #include "CarData.h"
 
+#define DEBUG_LOG
 
 CarData data;
 uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -47,6 +48,9 @@ byte len;
 byte rxBuf[8];
 byte txBuf[8];
 
+#ifdef DEBUG_LOG
+char msgString[128];
+#endif
 
 
 // Convertors from bytes to values
@@ -197,6 +201,12 @@ bool bt_forward;
 
 void handleHSMessage()
 {
+#ifdef DEBUG_LOG
+    sprintf(msgString, "HS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
+    Serial.println(msgString);
+    return;
+#endif
+
     // rxId, rxBuf
     if (rxId == 0x190)
     {
@@ -276,6 +286,12 @@ void handleHSMessage()
 
 void handleMSMessage()
 {
+#ifdef DEBUG_LOG
+    sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
+    Serial.println(msgString);
+    return;
+#endif
+
     // rxId, rxBuf
 
     if (rxId == 0x290)
