@@ -7,10 +7,12 @@ Reverse beeper (small switch)
 Info display (small switch)
 Gear indicator (small switch)
 Bluetooth (small switch)
+2x unused
 
 -- Buttons:
 Data sender (reset, power to NC)
 Second horn
+2x unused
 
 -- Dials:
 Audio switcher
