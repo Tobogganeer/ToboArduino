@@ -1,3 +1,13 @@
+-- NEW SWITCHES - PANEL SMALLER THAN EXPECTED
+Carputer power (big, panel)
+Front USB ports (small, panel)
+Rear USB ports (small, panel)
+
+Horn button (big, panel)
+
+
+
+
 -- Power switches:
 Carputer power
 CB radio power
