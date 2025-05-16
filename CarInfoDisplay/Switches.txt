@@ -1,9 +1,16 @@
 -- NEW SWITCHES - PANEL SMALLER THAN EXPECTED
 Carputer power (big, panel)
+HUD and gear indicator (big, panel)
+Info display (big, panel)
+
 Front USB ports (small, panel)
-Rear USB ports (small, panel)
+Rear USB ports Indicator (small, panel)
+Reverse beeper (small, panel)
+Bluetooth (small, panel)
 
 Horn button (big, panel)
+
+Small button x2 (unused)
 
 
 
