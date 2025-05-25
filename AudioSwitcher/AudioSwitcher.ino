@@ -17,7 +17,7 @@ GND: Middle rotary encoder
 
 D1 (GPIO5): SCL (I2C)
 D2 (GPIO4): SDA (I2C)
-
+ 
 D5 (GPIO14): Main audio select A
 D6 (GPIO12): Main audio select B
 D7 (GPIO13): AUX audio select A
