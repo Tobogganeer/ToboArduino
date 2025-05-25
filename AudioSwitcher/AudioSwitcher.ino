@@ -46,6 +46,7 @@ AUX audio select:
 #include "Rotary.h"
 #include <U8g2lib.h>
 #include <Wire.h>
+#include <Preferences.h>
 
 // 'D_Aux', 128x64px
 const unsigned char bmp_D_Aux[] PROGMEM = {
@@ -436,22 +437,12 @@ enum AudioSource : byte
 
 Rotary dial;
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
+Preferences preferences;
 
 bool sourceChanged = true; // Start true so we get an inital screen update
 int audioSource = (int)Bluetooth;
 
 const byte LAST_AUDIOSOURCE = Carputer;  // Used to loop back around
-
-
-
-
-
-// TODO: Save last used source in preferences
-
-
-
-
-
 
 
 void setup()
@@ -467,6 +458,11 @@ void setup()
     pinMode(AUDIO_MAIN_B, OUTPUT);
     pinMode(AUDIO_AUX_A, OUTPUT);
     pinMode(AUDIO_AUX_B, OUTPUT);
+
+    // Fetch last used audio source, default to Bluetooth
+    preferences.begin("audio-switcher", true);
+    audioSource = preferences.getInt("lastSource", (int)Bluetooth);
+    preferences.end();
 }
 
 void loop()
@@ -477,6 +473,12 @@ void loop()
     {
         updateScreen();
         updateSelectedAudioPins();
+
+        // Save last used source
+        preferences.begin("audio-switcher", false);
+        preferences.putInt("lastSource", audioSource);
+        preferences.end();
+
         sourceChanged = false;
     }
 }
