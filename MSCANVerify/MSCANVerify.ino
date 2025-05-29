@@ -37,7 +37,7 @@ void initCAN()
     pinMode(MSCAN_INT, INPUT_PULLUP);
 
     // Init HSCAN bus, baudrate: 500k@8MHz
-    if (HSCAN.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK)
+    if (HSCAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK)
     {
         Serial.println("HSCAN initialized");
         HSCAN.setMode(MCP_NORMAL);
@@ -45,7 +45,7 @@ void initCAN()
     else Serial.println("HSCAN init fail!");
 
     // Init MSCAN bus, baudrate: 250k@8MHz
-    if (MSCAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK)
+    if (MSCAN.begin(MCP_ANY, CAN_125KBPS, MCP_8MHZ) == CAN_OK)
     {
         Serial.println("MSCAN initialized");
         MSCAN.setMode(MCP_NORMAL);
