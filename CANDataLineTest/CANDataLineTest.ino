@@ -19,6 +19,10 @@ void loop()
     Serial.print("H:");
     Serial.print(canH);
     Serial.print(",L:");
-    Serial.println(canL);
+    Serial.print(canL);
+    Serial.print(",z:");
+    Serial.print(0);
+    Serial.print(",o:");
+    Serial.println(1023);
     delay(10);
 }

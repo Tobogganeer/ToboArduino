@@ -4,7 +4,7 @@ import serial
 import time
 import serial.tools.list_ports
 import msvcrt # https://stackoverflow.com/questions/2408560/non-blocking-console-input
-import time
+import time 
 
 arduino : serial.Serial
 
@@ -37,10 +37,12 @@ def readData():
         while running:
             line = arduino.readline().decode().strip()
             if line:
+
+
                 timestamp = int(time.time() * 1000)
                 written = f"{timestamp},{line}\n"
                 f.write(written)
-                print(written)
+                #print(written)
             if msvcrt.kbhit() and msvcrt.getch() == b'\x1b': # 0x1B is escape
                 running = False
 
