@@ -27,7 +27,7 @@ D2 -> INT (MSCAN)
 #include <espnow.h>
 #include "CarData.h"
 
-#define DEBUG_LOG
+//#define DEBUG_LOG
 
 CarData data;
 uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -100,7 +100,7 @@ void initCAN()
     pinMode(HSCAN_INT, INPUT_PULLUP);
     pinMode(MSCAN_INT, INPUT_PULLUP);
 
-    // Init HSCAN bus, baudrate: 500k@16MHz
+    // Init HSCAN bus, baudrate: 500k@8MHz
     if (HSCAN.begin(MCP_ANY, CAN_500KBPS, MCP_8MHZ) == CAN_OK)
     {
         Serial.println("HSCAN initialized");
@@ -108,8 +108,8 @@ void initCAN()
     }
     else Serial.println("HSCAN init fail!");
 
-    // Init MSCAN bus, baudrate: 250k@16MHz
-    if (MSCAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK)
+    // Init MSCAN bus, baudrate: 125k@8MHz
+    if (MSCAN.begin(MCP_ANY, CAN_125KBPS, MCP_8MHZ) == CAN_OK)
     {
         Serial.println("MSCAN initialized");
         MSCAN.setMode(MCP_NORMAL);
@@ -210,43 +210,31 @@ void handleHSMessage()
     // rxId, rxBuf
     if (rxId == 0x190)
     {
+        Serial.print("Throttle: ");
+        Serial.println(convert(rxBuf[1], rxBuf[0]).ushortVal);
+
         // B1-2: Throttle
         // B3-b7: Brakes on
         // B3-b5: Clutch on
         data.brakePressed = (rxBuf[2] & 0b01000000) > 0;
 
-        Serial.print("Clutch: ");
-        //Serial.println(rxBuf[2] & 0b00010000);  // NOT DETECTING ANYTHING
-        printBits(rxBuf[2]);
-        Serial.println();
+        Serial.print("Brake: ");
+        Serial.println(rxBuf[2] & 0b01000000 > 0);
     }
     if (rxId == 0x201)
     {
         Serial.print("RPM: ");
-        Serial.print((((uint16_t)rxBuf[0]) << 8) + rxBuf[1]);
-        Serial.print(" - 01 ");
-        Serial.println(convert(rxBuf[0], rxBuf[1]).ushortVal);
-        Serial.print(" - 10 ");
         Serial.println(convert(rxBuf[1], rxBuf[0]).ushortVal);
         // B1-2: RPM,
         // B3-4: Engine torque?
         // B5-6: Vehicle speed,
         // B7: Accelerator pedal
-    }
-    if (rxId == 0x231)
-    {
-        Serial.print("Gear: ");  // NEVER CHANGES, ALWAYS 0x01
 
-        char msgString[4];
-        sprintf(msgString, "0x%.2X", rxBuf[0]);
-        Serial.println(msgString);
+        Serial.print("Speed: ");
+        Serial.println(convert(rxBuf[5], rxBuf[4]).ushortVal);
 
-        //Serial.println(rxBuf[0]);
-
-        // B1: Gear:
-        //  0x00 = Neutral (vechicle moving), 0x01 = Neutral (vehicle stopped), 0xE1 = Reverse,
-        //  0x11 = 1st, 0x20 = 2nd, 0x30 = 3rt, 0x40 = 4th, 0x50 = 5th
-        // B7: 80 = In gear, C0 = Out of gear
+        Serial.print("Accel Pedal: ");
+        Serial.println(rxBuf[6] / 2.0f);
     }
     if (rxId == 0x420)
     {
@@ -257,6 +245,8 @@ void handleHSMessage()
     }
     if (rxId == 0x430)
     {
+        Serial.print("Fuel level: ");
+        Serial.println((rxBuf[0] * 0.25f) / 55.0f * 100.0f);
         // B1: Fuel level. 1 unit = 0,25l - 60.25L total (241 steps)
         // B2: Fuel tank sensor (?)
     }
@@ -265,11 +255,13 @@ void handleHSMessage()
         Serial.print("Doors: ");
         printBits(rxBuf[0]);
         Serial.println();
-        //char msgString[4];
-        //sprintf(msgString, "0x%.2X", rxBuf[0]);
-        //Serial.println(msgString);  // ALWAYS GETTING 0 SO FAR, TRY AGAIN WITH HEX?
         // B1: Doors. Ex. front left door open: 0x80, trunk open: 0x08
         // B4: bit1 = hand brake, bit2 = reverse gear
+
+        Serial.print("Hand brake: ");
+        Serial.println(rxBuf[3] & 0b01000001 > 0);
+        Serial.print("Reverse: ");
+        Serial.println(rxBuf[3] & 0b01000010 > 0);
     }
     if (rxId == 0x4DA)
     {
@@ -278,6 +270,8 @@ void handleHSMessage()
     }
     if (rxId == 0x4F2)
     {
+        Serial.print("Odometer: ");
+        Serial.println(convert(rxBuf[2], rxBuf[1]).ushortVal);
         // B2-3: Odometer
         // Might be first byte too to get the range
     }
@@ -304,6 +298,18 @@ void handleMSMessage()
     }
     if (rxId == 0x400)
     {
+        Serial.print("Inst fuel consump: ");
+        uint16_t inst = convert(rxBuf[3], rxBuf[2]).ushortVal;
+        if (inst == 0xFFF3)
+            Serial.println("---");
+        else
+            Serial.println(inst / 10.0f);
+
+        Serial.print("Avg fuel consump: ");
+        Serial.println(convert(rxBuf[5], rxBuf[4]).ushortVal / 100.0f);
+
+        Serial.print("Dist remaining (km): ");
+        Serial.println(convert(rxBuf[7], rxBuf[6]).ushortVal);
         // B1-2: Average speed (km/h). Might be one byte only
         // B3-4: Inst. fuel consumption L/100km (x/10, FFF3 = ---)
         // B5-6: Avg. fuel consumption L/100km (x/10). May be one byte only
@@ -311,6 +317,8 @@ void handleMSMessage()
     }
     if (rxId == 0x420)
     {
+        Serial.print("Coolant temp: ");
+        Serial.println(rxBuf[0] - 40);
         // B1: Engine coolant temperature (B1 - 40 = degrees celsius)
     }
     if (rxId == 0x28F)
@@ -359,9 +367,6 @@ void handleMSMessage()
 
 void sendCarData()
 {
-    data.rpm = random(300, 700);
-    data.speed = 100;
-
     esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(data));
 
     lastDataSendTime = millis();
