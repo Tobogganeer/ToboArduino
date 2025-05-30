@@ -231,7 +231,7 @@ void handleHSMessage()
         // B7: Accelerator pedal
 
         Serial.print("Speed: ");
-        Serial.println(convert(rxBuf[5], rxBuf[4]).ushortVal);
+        Serial.println(convert(rxBuf[5], rxBuf[4]).ushortVal / 100.0f);
 
         Serial.print("Accel Pedal: ");
         Serial.println(rxBuf[6] / 2.0f);
@@ -259,9 +259,11 @@ void handleHSMessage()
         // B4: bit1 = hand brake, bit2 = reverse gear
 
         Serial.print("Hand brake: ");
-        Serial.println(rxBuf[3] & 0b01000001 > 0);
+        Serial.println(rxBuf[3] & 0b00000001 > 0);
         Serial.print("Reverse: ");
-        Serial.println(rxBuf[3] & 0b01000010 > 0);
+        Serial.println(rxBuf[3] & 0b00000010 > 0);
+        printBits(rxBuf[3]);
+        Serial.println();
     }
     if (rxId == 0x4DA)
     {
