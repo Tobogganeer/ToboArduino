@@ -259,9 +259,9 @@ void handleHSMessage()
         // B4: bit1 = hand brake, bit2 = reverse gear
 
         Serial.print("Hand brake: ");
-        Serial.println(rxBuf[3] & 0b00000001 > 0);
+        Serial.println((rxBuf[3] & 0b00000001) > 0);
         Serial.print("Reverse: ");
-        Serial.println(rxBuf[3] & 0b00000010 > 0);
+        Serial.println((rxBuf[3] & 0b00000010) > 0);
         printBits(rxBuf[3]);
         Serial.println();
     }
