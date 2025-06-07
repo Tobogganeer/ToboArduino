@@ -6,19 +6,19 @@
 
 #include "./const.h"
 
+#define SERIAL_DEBUG
+
 #if defined(SERIAL_DEBUG)
     #define DBG(x) Serial.println(x)
 #else
     #define DBG(...)
 #endif
 
-#define SERIAL_DEBUG
-
 #include "./connect.h"
 #include "./ftp.h"
 #include "./cam.h"
 
-#define SEND_INTERVAL 60000
+#define SEND_INTERVAL 5000
 #define WIFI_CONNECT_INTERVAL 30000
 
 void setup() {

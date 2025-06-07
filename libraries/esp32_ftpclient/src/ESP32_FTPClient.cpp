@@ -146,6 +146,12 @@ void ESP32_FTPClient::OpenConnection() {
   
   GetFTPAnswer();
 
+  /*
+  FTPdbgn("Send USER");
+  client.println(F("AUTH TLS"));
+  GetFTPAnswer();
+  */
+
   FTPdbgn("Send USER");
   client.print(F("USER "));
   client.println(F(userName));

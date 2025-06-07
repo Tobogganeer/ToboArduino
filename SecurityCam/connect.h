@@ -5,14 +5,14 @@ bool wifi_connected = false;
 
 void WiFiEvent(WiFiEvent_t event) {
     switch (event) {
-        case IP_EVENT_STA_GOT_IP:
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
             DBG("\nWiFi connected");
             DBG(WiFi.localIP());
 
             wifi_connected = true;
             break;
 
-        case WIFI_EVENT_STA_DISCONNECTED:
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
             DBG("WiFi connection lost");
             wifi_connected = false;
             connect_timer = millis();
