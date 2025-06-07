@@ -3,11 +3,13 @@
 #include "img_converters.h"
 
 #include "fb_gfx.h"
-#include "fd_forward.h"
-#include "fr_forward.h"
+//#include "fd_forward.h"
+//#include "fr_forward.h"
 
 unsigned long send_timer = 0;
 bool cam_init_ok = false;
+
+const char* FILE_NAME = "file.jpg";
 
 bool cameraInit() {
     camera_config_t config;

@@ -12,9 +12,14 @@
     #define DBG(...)
 #endif
 
+#define SERIAL_DEBUG
+
 #include "./connect.h"
 #include "./ftp.h"
 #include "./cam.h"
+
+#define SEND_INTERVAL 60000
+#define WIFI_CONNECT_INTERVAL 30000
 
 void setup() {
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disable brownout detector
