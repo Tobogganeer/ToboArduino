@@ -9,8 +9,6 @@
 unsigned long send_timer = 0;
 bool cam_init_ok = false;
 
-const char* FILE_NAME = "file.jpg";
-
 bool cameraInit() {
     camera_config_t config;
     config.ledc_channel = LEDC_CHANNEL_0;
@@ -67,7 +65,23 @@ bool takePicture() {
     }
 
     DBG("Camera capture success");
-    uploadFile(fb->buf, fb->len, FILE_NAME);
+
+    // Add timestamp to name
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo))
+    {
+        Serial.println("Failed to obtain time");
+        return false;
+    }
+
+    // https://cplusplus.com/reference/ctime/strftime/
+    char timestamp[32];
+    int numChars = strftime(timestamp, 32, "%a %b %d %H_%M_%S %Y", &timeinfo);
+
+    strcat(timestamp, ".jpg");
+    DBG(timestamp);
+
+    uploadFile(fb->buf, fb->len, timestamp);
 
     esp_camera_fb_return(fb);
 
