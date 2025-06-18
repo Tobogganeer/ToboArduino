@@ -1,0 +1,23 @@
+12x Switched, 6x Battery
+
+Switched:
+1 - 
+2 - HUD, gear indicator, gear detector
+3 - Info display and Parking distance sensors
+4 - USB ports (gets split between 2 switches for front/back, also feeds aux usb cables)
+5 - 
+6 - Dashcam
+7 - Reverse beeper
+8 - Data sender
+9 - 
+10 - Bluetooth and Audio Switcher
+11 - Amp and external speaker
+12 - 
+
+Battery:
+1 - USB ports (gets split between 2 switches for front/back)
+2 - CB Radio (it has a built-in power switch so not worried about battery drain)
+3 - Carputer (runs off 12v directly, runs through switch, so no parasitic drain)
+4 - 
+5 - 
+6 - 

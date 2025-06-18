@@ -6,7 +6,8 @@ Info display (big, panel)
 Front USB ports (small, panel)
 Rear USB ports Indicator (small, panel)
 Reverse beeper (small, panel)
-Bluetooth (small, panel)
+Small switch x1 (unused)
+//Bluetooth (small, panel)
 
 Horn button (big, panel)
 
