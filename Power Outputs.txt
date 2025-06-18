@@ -10,7 +10,7 @@ Switched:
 7 - Reverse beeper
 8 - Data sender
 9 - 
-10 - Bluetooth and Audio Switcher
+10 - Bluetooth, bluetooth display, Audio Switcher
 11 - Amp and external speaker
 12 - 
 
@@ -21,3 +21,20 @@ Battery:
 4 - 
 5 - 
 6 - 
+
+
+
+
+
+--- Power Usage
+Carputer:      3.00A
+Display:       0.80A
+CB Radio:      0.33A
+ESP32: ~0.2*5= 1.00A
+USB    2.0*6= 12.00A
+Dashcam        1.00A
+Amp            2.00A
+Displays       0.10A
+Extras        ~2.00A
+==========================
+Total        ~23.00A
