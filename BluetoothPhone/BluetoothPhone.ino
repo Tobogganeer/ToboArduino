@@ -1,20 +1,8 @@
 /*
- * This sketch is based in part on a keypad demo from:
- * http://www.circuitbasics.com/how-to-set-up-a-keypad-on-an-arduino/
- * 
- * Keypad library:
- * https://playground.arduino.cc/uploads/Code/keypad/index.zip
- * 
- * Tone library:
- * http://downloads.arduino.cc/libraries/github.com/bhagman/Tone-1.0.0.zip
- * 
- * This input/output demo generates DTMF tones corresponding to keypad keys pressed.
- * LM - September 2019
- */
 
-
-
-/*
+Bluetooth Phone
+Handles the home-phone part of the bluetooth system
+TODO: How do I connect audio to the bluetooth receiver?
 
 Pin layout for phone keypad:
 
@@ -35,58 +23,30 @@ Pin layout for phone keypad:
 4+7 = 3
 4+8 = 2
 
-
-Pin 1: 
-Pin 2: 
-Pin 3: 
-Pin 4: 
-Pin 5: 
-Pin 6: 
-Pin 7: 
-
-
-
-=== Top buttons ===
-Row 1:
-Row 2:
-Row 3:
-Row 4:
-Row 5:
-=== Bottom Buttons ===
-
-Col 1:
-Col 2:
-Col 3:
-Col 4:
-=== Only for top row ===
-
 */
 
 
 
 #include <Keypad.h>
 
-// Uncomment next line to enable serial console debugging.
+// Uncomment next line to enable serial console debugging
 #define DEBUG 9600
 
 
-const byte ROWS = 5;
+const byte ROWS = 4;
 const byte COLS = 4;
 
 char keyMatrix[ROWS][COLS] = {
-    { 'R', 'M', 'S', 'F' },
-    { '1', '2', '3', 'A' },
-    { '4', '5', '6', 'B' },
-    { '7', '8', '9', 'C' },
-    { '*', '0', '#', 'D' }
+    { '1', '2', '3', 'R' },
+    { '4', '5', '6', 'M' },
+    { '7', '8', '9', 'S' },
+    { '*', '0', '#', 'A' }
 };
 
-byte rowPins[ROWS] = { 19, 18, 5, 17, 16 };
-byte colPins[COLS] = { 4, 0, 2, 15 };
-
-
-//byte rowPins[ROWS] = { 16, 4, 0, 2, 15 };
-//byte colPins[COLS] = { 19, 18, 5, 17 };
+// Pin #: 1   2  3   4   5  6  7  8   9
+// Pins: 19, 18, 5, 17, 16, 4, 0, 2, 15
+byte rowPins[ROWS] = { 17, 5, 18, 19 }; // 4, 3, 2, 1
+byte colPins[COLS] = { 15, 2, 0, 4 }; // 5, 8, 7, 6, //9
 
 
 // Tone frequencies
@@ -110,8 +70,8 @@ void setup()
 #ifdef DEBUG
     Serial.begin(DEBUG);
 #endif
-    ledcAttach(ROW_TONE_DIO, 0, PWM_RESOLUTION);
-    ledcAttach(COL_TONE_DIO, 0, PWM_RESOLUTION);
+    ledcAttach(ROW_TONE_DIO, 200, PWM_RESOLUTION);
+    ledcAttach(COL_TONE_DIO, 500, PWM_RESOLUTION);
 }
 
 void loop()
