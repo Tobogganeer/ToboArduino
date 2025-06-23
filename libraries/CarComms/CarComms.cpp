@@ -5,9 +5,16 @@ void CarComms::OnCarDataReceived(const esp_now_recv_info* info, const uint8_t* i
 #else
 void CarComms::OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t len) {
 #endif
-
-    memcpy(&_CDR_internal_data, incomingData, sizeof(CarData));
-    _CDR_internal_callback(&_CDR_internal_data);
+    // Needs to have at least the check byte and the type
+    if (len < 2)
+        return;
+    // Make sure this isn't a stray broadcast or anything - only from car electronics
+    if (incomingData[0] != CHECK_BYTE)
+        return;
+    
+    // Callback with type (first byte), data (data after first 2 bytes), and length
+    _internalRecvCallback((CarDataType)incomingData[1], incomingData + 2, len - 2);
+    //_CDR_internal_callback(&_CDR_internal_data);
 }
 
 
