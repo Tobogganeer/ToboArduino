@@ -22,11 +22,14 @@ ESP8266/ESP32 modules
 #endif
 
 #define ESP_NOW_CHANNEL 4
+#define CHECK_BYTE 0xFB
 
 
 class CarComms
 {
     private:
+        static uint8_t broadcastAddress[6];
+        static uint8_t dataWithTypeAndCheckByte[250];
         void (*_internalRecvCallback) (CarDataType type, const uint8_t* data, int len);
 
         #ifndef ARDUINO_ARCH_ESP8266

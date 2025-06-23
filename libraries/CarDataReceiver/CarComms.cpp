@@ -5,6 +5,7 @@ void CarComms::OnCarDataReceived(const esp_now_recv_info* info, const uint8_t* i
 #else
 void CarComms::OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t len) {
 #endif
+
     memcpy(&_CDR_internal_data, incomingData, sizeof(CarData));
     _CDR_internal_callback(&_CDR_internal_data);
 }
@@ -39,7 +40,20 @@ void CarComms::begin()
     esp_now_register_recv_cb(OnCarDataReceived);
 }
 
-void CarComms::send(CarDataType type, const uint8_t* data, int len)
-{
+uint8_t CarComms::broadcastAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+uint8_t CarComms:dataWithTypeAndCheckByte[250] = {};
 
+bool CarComms::send(CarDataType type, const uint8_t* data, int len)
+{
+    // Max length is 250 and we are adding two bytes
+    if (len > 248)
+        return false;
+
+    // Prepend data with type and check byte
+    memcpy(dataWithTypeAndCheckByte, data, len);
+    dataWithTypeAndCheckByte[0] = CHECK_BYTE;
+    dataWithTypeAndCheckByte[1] = type;
+    // Send it
+    esp_now_send(broadcastAddress, dataWithTypeAndCheckByte, len + 2);
+    return true;
 }
