@@ -72,12 +72,6 @@ void setup()
     lcd.print("Evan Daveikis");
     lcd.setCursor(2, 3);
     lcd.print("System booting...");
-
-    delay(2000);
-    lcd.home();
-    lcd.write(byte(0));
-    lcd.write(byte(1));
-    lcd.write(byte(2));
 }
 
 

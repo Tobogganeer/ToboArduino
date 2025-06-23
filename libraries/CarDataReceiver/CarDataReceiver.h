@@ -21,6 +21,8 @@ ESP8266/ESP32 modules
 #include <espnow.h>
 #endif
 
+#define ESP_NOW_CHANNEL 4
+
 
 CarData _CDR_internal_data;
 void (*_CDR_internal_callback) (CarData* data);
@@ -40,16 +42,21 @@ void initCarDataReceiver(void (*dataCallback) (CarData* data))
     // Set device as a Wi-Fi Station
     WiFi.mode(WIFI_STA);
 
+    #ifdef ARDUINO_ARCH_ESP8266
+    wifi_set_channel(ESP_NOW_CHANNEL);
+    #else
+    WiFi.setChannel(ESP_NOW_CHANNEL);
+    #endif
+
     // Init ESP-NOW
     if (esp_now_init() != 0) {
         Serial.println("Error initializing ESP-NOW for CarDataReceiver");
         return;
     }
 
-    // Once ESPNow is successfully Init, we will register for recv CB to
-    // get recv packer info
+    // Register receive callback
     #ifdef ARDUINO_ARCH_ESP8266
-    esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
+    esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
     #endif
     esp_now_register_recv_cb(OnCarDataReceived);
     _CDR_internal_callback = dataCallback;

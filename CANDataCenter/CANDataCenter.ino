@@ -43,6 +43,8 @@ MCP_CAN MSCAN(2);  // MS/LS CAN bus, CS is pin 4 (GPIO2)
 #define HSCAN_INT 5  // Interrupt pin for normal CAN
 #define MSCAN_INT 4  // Interrupt pin for MS/LS CAN
 
+#define ESP_NOW_CHANNEL 4
+
 unsigned long rxId;
 byte len;
 byte rxBuf[8];
@@ -83,6 +85,7 @@ void initESPNow()
 {
     // Set device as a Wi-Fi Station
     WiFi.mode(WIFI_STA);
+    wifi_set_channel(ESP_NOW_CHANNEL);
 
     // Init ESP-NOW
     if (esp_now_init() != 0)
