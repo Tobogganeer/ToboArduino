@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-typedef enum: uint8_t {ID_BTSKIP, ID_CARINFO} CarDataID;
+typedef enum: uint8_t {ID_BTSKIP, ID_CARINFO} CarDataType;
 
 typedef struct CarData {
 	CarDataID id;
