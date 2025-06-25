@@ -29,25 +29,29 @@ ESP8266/ESP32 modules
 class CarComms
 {
     private:
+        static CarComms* instance; // Icky and kinda stupid
+        // I want to keep it as a class though as that is Arduino-library stype
+
         void (*_internalRecvCallback) (CarDataType type, const uint8_t* data, int len);
 
         #ifndef ARDUINO_ARCH_ESP8266
-        void OnCarDataReceived(const esp_now_recv_info* info, const uint8_t* incomingData, int len);
+        static void OnDataReceivedStatic(const esp_now_recv_info* info, const uint8_t* incomingData, int len);
         #else
-        void OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t len);
+        static void OnDataReceivedStatic(uint8_t* mac, uint8_t* incomingData, uint8_t len);
         #endif
+        void OnDataReceived(const uint8_t* incomingData, uint8_t len);
 
     public:
         uint8_t receiveTypeMask = 0xFF; // Restricts what types of message we receive (CarDataType)
 
-        CarComms(void (*recvCallback) (CarDataType type, const uint8_t* data, int len))
+        CarComms(void (*recvCallback) (CarDataType type, const uint8_t* data, int len));
         void begin();
-        void send(CarDataType type, const uint8_t* data, int len);
+        bool send(CarDataType type, const uint8_t* data, int len);
         uint32_t getLastReceiveTimeMS();
         uint32_t getTimeSinceLastReceiveMS(); // Returns -1 if no message has been received
         uint32_t getLastReceiveTimeMS(CarDataType messageType);
         uint32_t getTimeSinceLastReceiveMS(CarDataType messageType); // Returns -1 if no message has been received
         void setReceiveTypeMask(uint8_t mask) { receiveTypeMask = mask; }
-}
+};
 
 #endif // ifndef CARCOMMS_H

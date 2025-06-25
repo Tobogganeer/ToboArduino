@@ -2,9 +2,9 @@
 
 uint8_t broadcastAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 uint8_t dataWithTypeAndCheckByte[250] = {0};
-uint32_t lastReceiveTimeMS = -1;
-uint32_t lastReceiveTimes[6] = { -1, -1, -1, -1, -1, -1 }; // One for each message type
-uint8_t CarComms::receiveTypeMask = 0xFF; // Default to accept all messages
+int32_t lastReceiveTimeMS = -1;
+int32_t lastReceiveTimes[6] = { -1, -1, -1, -1, -1, -1 }; // One for each message type
+CarComms* CarComms::instance = nullptr;
 
 
 void StoreLastReceiveTime(CarDataType type)
@@ -33,11 +33,18 @@ void StoreLastReceiveTime(CarDataType type)
     }
 }
 
+
 #ifndef ARDUINO_ARCH_ESP8266
-void CarComms::OnCarDataReceived(const esp_now_recv_info* info, const uint8_t* incomingData, int len) {
+void CarComms::OnDataReceivedStatic(const esp_now_recv_info* info, const uint8_t* incomingData, int len) {
 #else
-void CarComms::OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t len) {
+void CarComms::OnDataReceivedStatic(uint8_t* mac, uint8_t* incomingData, uint8_t len) {
 #endif
+    if (instance) {
+        instance->OnDataReceived(incomingData, len);
+    }
+}
+
+void CarComms::OnDataReceived(const uint8_t* incomingData, uint8_t len) {
     // Needs to have at least the check byte and the type
     if (len < 2)
         return;
@@ -51,7 +58,7 @@ void CarComms::OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t le
         return;
 
     lastReceiveTimeMS = millis();
-    StoreLastReceiveTime(type); // Store that specific receive time
+    StoreLastReceiveTime((CarDataType)type); // Store that specific receive time
 
     // Data comes after check and type bytes
     _internalRecvCallback((CarDataType)type, incomingData + 2, len - 2);
@@ -61,6 +68,7 @@ void CarComms::OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t le
 CarComms::CarComms(void (*recvCallback) (CarDataType type, const uint8_t* data, int len))
 {
     _internalRecvCallback = recvCallback;
+    CarComms::instance = this;
 }
 
 void CarComms::begin()
@@ -84,7 +92,7 @@ void CarComms::begin()
     #ifdef ARDUINO_ARCH_ESP8266
     esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
     #endif
-    esp_now_register_recv_cb(OnCarDataReceived);
+    esp_now_register_recv_cb(OnDataReceivedStatic);
 }
 
 bool CarComms::send(CarDataType type, const uint8_t* data, int len)
