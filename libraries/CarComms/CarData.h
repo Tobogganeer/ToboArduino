@@ -10,6 +10,7 @@ typedef enum : uint8_t {
 	ID_BT_SKIP 			= 1 << 3,
 	ID_OEM_DISPLAY 		= 1 << 4,
 	ID_REVERSEPROXIMITY = 1 << 5,
+	ID_BUZZER			= 1 << 6,
 } CarDataType;
 // Update the receiveTimes array in CarComms if any are added/removed
 
@@ -82,11 +83,17 @@ typedef struct OEMDisplayMsg {
 	char message[14];
 } OEMDisplayMsg;
 
-typedef struct ReverseProximityMessage {
+typedef struct ReverseProximityMsg {
 	uint16_t leftmostDistance; // Driver side
 	uint16_t middleLeftDistance;
 	uint16_t middleRightDistance;
 	uint16_t rightmostDistance; // Passenger side
-} ReverseProximityMessage;
+} ReverseProximityMsg;
+
+typedef struct BuzzerMsg {
+	uint32_t frequency1;
+	uint32_t frequency2;
+	uint16_t duration;
+} BuzzerMsg;
 
 #endif

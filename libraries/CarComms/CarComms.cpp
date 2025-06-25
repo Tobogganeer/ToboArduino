@@ -3,7 +3,7 @@
 uint8_t broadcastAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 uint8_t dataWithTypeAndCheckByte[250] = {0};
 int32_t lastReceiveTimeMS = -1;
-int32_t lastReceiveTimes[6] = { -1, -1, -1, -1, -1, -1 }; // One for each message type
+int32_t lastReceiveTimes[7] = { -1, -1, -1, -1, -1, -1, -1 }; // One for each message type
 CarComms* CarComms::instance = nullptr;
 
 
@@ -29,6 +29,9 @@ void StoreLastReceiveTime(CarDataType type)
             break;
         case CarDataType::ID_REVERSEPROXIMITY:
             lastReceiveTimes[5] = millis();
+            break;
+        case CarDataType::ID_BUZZER:
+            lastReceiveTimes[6] = millis();
             break;
     }
 }
@@ -136,6 +139,8 @@ uint32_t CarComms::getLastReceiveTimeMS(CarDataType type)
             return lastReceiveTimes[4];
         case CarDataType::ID_REVERSEPROXIMITY:
             return lastReceiveTimes[5];
+        case CarDataType::ID_BUZZER:
+            return lastReceiveTimes[6];
     }
 
     return lastReceiveTimeMS;
