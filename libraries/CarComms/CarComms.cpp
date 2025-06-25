@@ -1,5 +1,10 @@
 #include "CarComms.h"
 
+uint8_t CarComms::broadcastAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+uint8_t CarComms::dataWithTypeAndCheckByte[250] = {0};
+uint32_t CarComms::lastReceiveTimeMS = -1;
+
+
 #ifndef ARDUINO_ARCH_ESP8266
 void CarComms::OnCarDataReceived(const esp_now_recv_info* info, const uint8_t* incomingData, int len) {
 #else
@@ -12,6 +17,8 @@ void CarComms::OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t le
     if (incomingData[0] != CHECK_BYTE)
         return;
     
+    lastReceiveTimeMS = millis();
+
     // Callback with type (first byte), data (data after first 2 bytes), and length
     _internalRecvCallback((CarDataType)incomingData[1], incomingData + 2, len - 2);
     //_CDR_internal_callback(&_CDR_internal_data);
@@ -47,9 +54,6 @@ void CarComms::begin()
     esp_now_register_recv_cb(OnCarDataReceived);
 }
 
-uint8_t CarComms::broadcastAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-uint8_t CarComms:dataWithTypeAndCheckByte[250] = {};
-
 bool CarComms::send(CarDataType type, const uint8_t* data, int len)
 {
     // Max length is 250 and we are adding two bytes
@@ -63,4 +67,14 @@ bool CarComms::send(CarDataType type, const uint8_t* data, int len)
     // Send it
     esp_now_send(broadcastAddress, dataWithTypeAndCheckByte, len + 2);
     return true;
+}
+
+uint32_t CarComms::getLastReceiveTimeMS()
+{
+    return lastReceiveTimeMS;
+}
+
+uint32_t CarComms::getTimeSinceLastReceiveMS()
+{
+    return millis() - lastReceiveTimeMS;
 }

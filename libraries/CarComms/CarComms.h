@@ -3,7 +3,8 @@
 
 /*
 
-Any module that wants to receive data from the car should pull this in
+Wrapper for ESP-NOW functions
+Any module that wants to send/receive data in the car should pull this in
 ESP8266/ESP32 modules
 
 */
