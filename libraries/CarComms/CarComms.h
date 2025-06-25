@@ -29,8 +29,6 @@ ESP8266/ESP32 modules
 class CarComms
 {
     private:
-        static uint8_t broadcastAddress[6];
-        static uint8_t dataWithTypeAndCheckByte[250];
         void (*_internalRecvCallback) (CarDataType type, const uint8_t* data, int len);
 
         #ifndef ARDUINO_ARCH_ESP8266
@@ -40,9 +38,16 @@ class CarComms
         #endif
 
     public:
+        uint8_t receiveTypeMask = 0xFF; // Restricts what types of message we receive (CarDataType)
+
         CarComms(void (*recvCallback) (CarDataType type, const uint8_t* data, int len))
         void begin();
         void send(CarDataType type, const uint8_t* data, int len);
+        uint32_t getLastReceiveTimeMS();
+        uint32_t getTimeSinceLastReceiveMS(); // Returns -1 if no message has been received
+        uint32_t getLastReceiveTimeMS(CarDataType messageType);
+        uint32_t getTimeSinceLastReceiveMS(CarDataType messageType); // Returns -1 if no message has been received
+        void setReceiveTypeMask(uint8_t mask) { receiveTypeMask = mask; }
 }
 
 #endif // ifndef CARCOMMS_H

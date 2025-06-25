@@ -1,9 +1,37 @@
 #include "CarComms.h"
 
-uint8_t CarComms::broadcastAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-uint8_t CarComms::dataWithTypeAndCheckByte[250] = {0};
-uint32_t CarComms::lastReceiveTimeMS = -1;
+uint8_t broadcastAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+uint8_t dataWithTypeAndCheckByte[250] = {0};
+uint32_t lastReceiveTimeMS = -1;
+uint32_t lastReceiveTimes[6] = { -1, -1, -1, -1, -1, -1 }; // One for each message type
+uint8_t CarComms::receiveTypeMask = 0xFF; // Default to accept all messages
 
+
+void StoreLastReceiveTime(CarDataType type)
+{
+    // Types are set up to be flags/masks so aren't an even 0-5
+    switch (type)
+    {
+        case CarDataType::ID_CARINFO:
+            lastReceiveTimes[0] = millis();
+            break;
+        case CarDataType::ID_GEAR:
+            lastReceiveTimes[1] = millis();
+            break;
+        case CarDataType::ID_BT_INFO:
+            lastReceiveTimes[2] = millis();
+            break;
+        case CarDataType::ID_BT_SKIP:
+            lastReceiveTimes[3] = millis();
+            break;
+        case CarDataType::ID_OEM_DISPLAY:
+            lastReceiveTimes[4] = millis();
+            break;
+        case CarDataType::ID_REVERSEPROXIMITY:
+            lastReceiveTimes[5] = millis();
+            break;
+    }
+}
 
 #ifndef ARDUINO_ARCH_ESP8266
 void CarComms::OnCarDataReceived(const esp_now_recv_info* info, const uint8_t* incomingData, int len) {
@@ -17,11 +45,16 @@ void CarComms::OnCarDataReceived(uint8_t* mac, uint8_t* incomingData, uint8_t le
     if (incomingData[0] != CHECK_BYTE)
         return;
     
-    lastReceiveTimeMS = millis();
+    // Do we want to receive this message?
+    uint8_t type = incomingData[1];
+    if ((receiveTypeMask & type) == 0)
+        return;
 
-    // Callback with type (first byte), data (data after first 2 bytes), and length
-    _internalRecvCallback((CarDataType)incomingData[1], incomingData + 2, len - 2);
-    //_CDR_internal_callback(&_CDR_internal_data);
+    lastReceiveTimeMS = millis();
+    StoreLastReceiveTime(type); // Store that specific receive time
+
+    // Data comes after check and type bytes
+    _internalRecvCallback((CarDataType)type, incomingData + 2, len - 2);
 }
 
 
@@ -77,4 +110,30 @@ uint32_t CarComms::getLastReceiveTimeMS()
 uint32_t CarComms::getTimeSinceLastReceiveMS()
 {
     return millis() - lastReceiveTimeMS;
+}
+
+uint32_t CarComms::getLastReceiveTimeMS(CarDataType type)
+{
+    switch (type)
+    {
+        case CarDataType::ID_CARINFO:
+            return lastReceiveTimes[0];
+        case CarDataType::ID_GEAR:
+            return lastReceiveTimes[1];
+        case CarDataType::ID_BT_INFO:
+            return lastReceiveTimes[2];
+        case CarDataType::ID_BT_SKIP:
+            return lastReceiveTimes[3];
+        case CarDataType::ID_OEM_DISPLAY:
+            return lastReceiveTimes[4];
+        case CarDataType::ID_REVERSEPROXIMITY:
+            return lastReceiveTimes[5];
+    }
+
+    return lastReceiveTimeMS;
+}
+
+uint32_t CarComms::getTimeSinceLastReceiveMS(CarDataType type)
+{
+    return millis() - getLastReceiveTimeMS(type);
 }

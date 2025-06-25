@@ -11,6 +11,7 @@ typedef enum : uint8_t {
 	ID_OEM_DISPLAY 		= 1 << 4,
 	ID_REVERSEPROXIMITY = 1 << 5,
 } CarDataType;
+// Update the receiveTimes array in CarComms if any are added/removed
 
 typedef enum : uint8_t {
 	Neutral,
