@@ -12,14 +12,6 @@
  String btAudio::genre="";
  String btAudio::artist="";
  
- int btAudio::_postprocess=0;
- filter btAudio::_filtLhp = filter(2,_sampleRate,3,highpass); 
- filter btAudio::_filtRhp = filter(2,_sampleRate,3,highpass);
- filter btAudio::_filtLlp = filter(20000,_sampleRate,3,lowpass); 
- filter btAudio::_filtRlp = filter(20000,_sampleRate,3,lowpass);  
- DRC btAudio::_DRCL = DRC(_sampleRate,60.0,0.001,0.2,4.0,10.0,0.0); 
- DRC btAudio::_DRCR = DRC(_sampleRate,60.0,0.001,0.2,4.0,10.0,0.0); 
- 
  Preferences preferences;
 
 ////////////////////////////////////////////////////////////////////
@@ -245,10 +237,9 @@ void btAudio::i2sCallback(const uint8_t *data, uint32_t len){
   float temp;
   
   int jump =4; //how many bytes at a time get sent to buffer
-  int  n = len/jump; // number of byte chunks	
-	switch (_postprocess) {
-   case NOTHING:
-        for(int i=0;i<n;i++){
+  int n = len/jump; // number of byte chunks
+
+  for(int i=0;i<n;i++){
 		 //process left channel
 		 fy[0] = (int16_t)((*data16)*_vol);
 		 data16++;
@@ -257,128 +248,9 @@ void btAudio::i2sCallback(const uint8_t *data, uint32_t len){
 		 fy[1] = (int16_t)((*data16)*_vol);
 		 data16++;
 		 i2s_write(I2S_NUM_0, fy, jump, &i2s_bytes_write,  100 ); 
-		}
-		break;
-   case FILTER:
-		for(int i=0;i<n;i++){
-		 //process left channel
-		 temp = _filtLlp.process(_filtLhp.process((*data16)*_vol));
-		 
-		 // overflow check
-		 if(temp>32767){
-		 temp=32767;
-		 }
-		 if(temp < -32767){
-			temp= -32767;
-		 }
-		 fy[0] = (int16_t)(temp);
-	     data16++;
-		 
-		 // process right channel
-		 temp = _filtRlp.process(_filtRhp.process((*data16)*_vol));
-		 if(temp>32767){
-		 temp=32767;
-		 }
-		 if(temp < -32767){
-			temp= -32767;
-		 }
-		 fy[1] =(int16_t) (temp);
-		 data16++; 
-		 i2s_write(I2S_NUM_0, fy, jump, &i2s_bytes_write,  100 );
-		} 
-		break;
-   case COMPRESS:
-	    for(int i=0;i<n;i++){
-		 //process left channel
-		 fy[0] = (*data16); 
-		 fy[0]=_DRCL.softKnee(fy[0]*_vol);
-		 data16++;
-		 
-		 // process right channel
-		 fy[1] = (*data16);
-		 fy[1]=_DRCR.softKnee(fy[1]*_vol);
-		 data16++;
-		 i2s_write(I2S_NUM_0, fy, jump, &i2s_bytes_write,  100 );
-		}
-		break;
-   case FILTER_COMPRESS:
-      for(int i=0;i<n;i++){
-		 //process left channel(overflow check built into DRC)
-		 fy[0] = _DRCL.softKnee(_filtLhp.process(_filtLlp.process((*data16)*_vol)));
-		 data16++;
-		 
-		 //process right channel(overflow check built into DRC)
-		 fy[1] = _DRCR.softKnee(_filtRhp.process(_filtRlp.process((*data16)*_vol)));
-		 data16++;
-		 i2s_write(I2S_NUM_0, fy, jump, &i2s_bytes_write,  100 );
-		}
-		break;	
   }
-
 }
+
 void btAudio::volume(float vol){
 	_vol = constrain(vol,0,1);	
-}
-
-////////////////////////////////////////////////////////////////////
-////////////////// Filtering Functionality /////////////////////////
-////////////////////////////////////////////////////////////////////
-void btAudio::createFilter(int n, float fc, int type){
-   fc=constrain(fc,2,20000);
-   switch (type) {
-   case lowpass:
-	_filtLlp= filter(fc,_sampleRate,n,type);
-    _filtRlp= filter(fc,_sampleRate,n,type);
-   break;
-   case highpass:
-	_filtLhp= filter(fc,_sampleRate,n,type);
-    _filtRhp= filter(fc,_sampleRate,n,type);
-   break;
-   }
-	_filtering=true;
-	
-	if(_filtering & _compressing){
-	 _postprocess=3;	
-	}else{
-	 _postprocess=1;
-	}
-}
-void btAudio::stopFilter(){
-	_filtering=false;
-	if(_compressing){
-	  _postprocess = 2;
-	}else{
-	 _postprocess = 0;
-	}
-}
-
-////////////////////////////////////////////////////////////////////
-////////////////// Compression Functionality ///////////////////////
-////////////////////////////////////////////////////////////////////
-void btAudio::compress(float T,float alphAtt,float alphRel, float R,float w,float mu){
-	_T=T;
-	_alphAtt=alphAtt;
-	_alphRel=alphRel;
-	_R=R;
-	_w=w;
-	_mu=mu;
-	
-	_DRCL = DRC(_sampleRate,T,alphAtt,alphRel,R,w,mu);
-	_DRCR = DRC(_sampleRate,T,alphAtt,alphRel,R,w,mu);
-	_compressing=true;
-	
-	if(_filtering & _compressing){
-	 _postprocess=3;	
-	}else{
-	 _postprocess=2;
-	}	
-}
-void btAudio::decompress(){
-	_compressing=false;
-	
-	if(_filtering){
-	  _postprocess = 1;
-	}else{
-	 _postprocess = 0;
-	}
 }

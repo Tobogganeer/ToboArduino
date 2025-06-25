@@ -1,6 +1,6 @@
 /*
 
-BluetoothAudio code is huge; it can't even run a display
+BluetoothAudio code is huge; it can't run a display but it can do ESP-NOW
 This board will communicate via ESP-NOW and drive the display/settings
 
 */
