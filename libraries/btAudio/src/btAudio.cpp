@@ -9,8 +9,8 @@ int32_t btAudio::_sampleRate = 44100;
 
 String btAudio::title = "";
 String btAudio::album = "";
-String btAudio::genre = "";
 String btAudio::artist = "";
+String btAudio::sourceDeviceName = "";
 
 bool btAudio::avrcConnected = false;
 esp_bd_addr_t btAudio::connectedAddress;
@@ -44,9 +44,10 @@ void btAudio::begin()
     // initialize AVRCP controller
     esp_avrc_ct_init();
     esp_avrc_ct_register_callback(avrc_callback);
+    esp_bt_gap_register_callback()
 
-    // this sets up the audio receive
-    esp_a2d_sink_init();
+      // this sets up the audio receive
+      esp_a2d_sink_init();
 
     esp_a2d_register_callback(a2d_cb);
 
@@ -95,6 +96,11 @@ void btAudio::disconnect()
     esp_a2d_sink_disconnect(_address);
 }
 
+void btConnected(uint8_t *bda)
+{
+    esp_bt_gap_read_remote_name(remote_bda);
+}
+
 void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
 {
     esp_a2d_cb_param_t *a2d = (esp_a2d_cb_param_t *)(param);
@@ -112,6 +118,8 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                     _address[4] = *(temp + 4);
                     _address[5] = *(temp + 5);
                     ESP_LOGI("btAudio", "Connected to BT device: %d %d %d %d %d %d", _address[0], _address[1], _address[2], _address[3], _address[4], _address[5]);
+
+                    btConnected();
 
                     // Store connected BT address for use by reconnect()
                     preferences.begin("btAudio", false);
@@ -208,7 +216,7 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
         case ESP_AVRC_CT_CONNECTION_STATE_EVT:
             // https://docs.espressif.com/projects/esp-idf/en/v4.2/esp32/api-reference/bluetooth/esp_avrc.html#_CPPv442esp_avrc_ct_send_register_notification_cmd7uint8_t7uint8_t8uint32_t
             avrcConnected = rc->conn_stat.connected;
-            memcpy(connectedAddress, rc->conn_stat.remote_bda, 6);
+            memcpy(avrcAddress, rc->conn_stat.remote_bda, 6);
 
             if (avrcConnected)
             {
@@ -275,6 +283,31 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
             break;
     }
 }
+
+void btAudio::gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
+{
+    switch (event)
+    {
+        case ESP_BT_GAP_READ_REMOTE_NAME_EVT:
+            if (param->read_rmt_name.stat == ESP_BT_STATUS_SUCCESS)
+            {
+                ESP_LOGI("RCCT", "Remote device name: %s", param->read_rmt_name.rmt_name);
+
+                // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/bluetooth/esp_gap_bt.html#_CPPv4N21esp_bt_gap_cb_param_t19read_rmt_name_param8rmt_nameE
+                sourceDeviceName = String(param->read_rmt_name.rmt_name);
+                // TODO: Send message?
+            }
+            else
+            {
+                ESP_LOGW("RCCT", "Failed to read remote device name");
+            }
+            break;
+        default:
+            ESP_LOGI("RCCT", "GAP event: %d", event);
+            break;
+    }
+}
+
 void btAudio::setSinkCallback(void (*sinkCallback)(const uint8_t *data, uint32_t len))
 {
     esp_a2d_sink_register_data_callback(sinkCallback);

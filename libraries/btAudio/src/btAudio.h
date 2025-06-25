@@ -32,10 +32,10 @@ class btAudio {
 	static String title;
     static String artist;
     static String album;
-	static String genre;
+	static String sourceDeviceName;
 
 	static bool avrcConnected;
-	static esp_bd_addr_t connectedAddress;
+	static esp_bd_addr_t avrcAddress;
 	
   private:
     const char *_devName;
@@ -45,6 +45,7 @@ class btAudio {
 	static void i2sCallback(const uint8_t *data, uint32_t len);
 	static void a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param);
 	static void avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param);
+	static void gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param);
 	
 	// bluetooth address of connected device
 	static uint8_t _address[6];
