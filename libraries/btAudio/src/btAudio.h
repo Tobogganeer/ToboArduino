@@ -33,6 +33,9 @@ class btAudio {
     static String artist;
     static String album;
 	static String genre;
+
+	static bool avrcConnected;
+	static esp_bd_addr_t connectedAddress;
 	
   private:
     const char *_devName;

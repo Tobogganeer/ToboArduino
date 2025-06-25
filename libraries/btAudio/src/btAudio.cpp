@@ -12,6 +12,9 @@ String btAudio::album = "";
 String btAudio::genre = "";
 String btAudio::artist = "";
 
+bool btAudio::avrcConnected = false;
+esp_bd_addr_t btAudio::connectedAddress;
+
 Preferences preferences;
 
 ////////////////////////////////////////////////////////////////////
@@ -186,7 +189,12 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
 }
 void btAudio::updateMeta()
 {
-    uint8_t attr_mask = ESP_AVRC_MD_ATTR_TITLE | ESP_AVRC_MD_ATTR_ARTIST | ESP_AVRC_MD_ATTR_ALBUM | ESP_AVRC_MD_ATTR_GENRE;
+    if (!avrcConnected)
+    {
+        log_w("Tried to update metadata while not connected to AVRC");
+        return;
+    }
+    uint8_t attr_mask = ESP_AVRC_MD_ATTR_TITLE | ESP_AVRC_MD_ATTR_ARTIST | ESP_AVRC_MD_ATTR_ALBUM;
     esp_avrc_ct_send_metadata_cmd(1, attr_mask);
 }
 void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
@@ -197,6 +205,18 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
 
     switch (event)
     {
+        case ESP_AVRC_CT_CONNECTION_STATE_EVT:
+            // https://docs.espressif.com/projects/esp-idf/en/v4.2/esp32/api-reference/bluetooth/esp_avrc.html#_CPPv442esp_avrc_ct_send_register_notification_cmd7uint8_t7uint8_t8uint32_t
+            avrcConnected = rc->conn_stat.connected;
+            memcpy(connectedAddress, rc->conn_stat.remote_bda, 6);
+
+            if (avrcConnected)
+            {
+                // Ask it to tell us when the time, track etc changes every 1000ms
+                uint8_t attr_mask = ESP_AVRC_RN_PLAY_STATUS_CHANGE | ESP_AVRC_RN_TRACK_CHANGE | ESP_AVRC_RN_PLAY_POS_CHANGED;
+                esp_avrc_ct_send_register_notification_cmd(1, attr_mask, 200);
+            }
+            break;
         case ESP_AVRC_CT_METADATA_RSP_EVT:
             {
                 attr_text = (char *)malloc(rc->meta_rsp.attr_length + 1);
@@ -221,13 +241,33 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                         //Serial.println(mystr);
                         album = mystr;
                         break;
-                    case ESP_AVRC_MD_ATTR_GENRE:
-                        //Serial.print("Genre: ");
-                        //Serial.println(mystr);
-                        genre = mystr;
-                        break;
                 }
                 free(attr_text);
+            }
+            break;
+        case ESP_AVRC_CT_CHANGE_NOTIFY_EVT:
+            uint8_t event = rc->change_ntf.event_id;
+            switch (event)
+            {
+                case ESP_AVRC_RN_PLAY_STATUS_CHANGE:
+                    // TODO: Message about track being paused (or maybe do nothing?)
+                    esp_avrc_playback_stat_t playback = rc->change_ntf.event_parameter.playback;
+                    /*
+                    ESP_AVRC_PLAYBACK_STOPPED = 0
+                    ESP_AVRC_PLAYBACK_PLAYING = 1
+                    ESP_AVRC_PLAYBACK_PAUSED = 2
+                    ESP_AVRC_PLAYBACK_FWD_SEEK = 3
+                    ESP_AVRC_PLAYBACK_REV_SEEK = 4
+                    */
+                    break;
+                case ESP_AVRC_RN_TRACK_CHANGE:
+                    // TODO: Send ESP-NOW message as track has changed + update metadata
+                    // rc->change_ntf.event_parameter.elm_id is a uint8_t[8], just a song ID used to get metadata
+                    break;
+                case ESP_AVRC_RN_PLAY_POS_CHANGED:
+                    // TODO: Message about play pos
+                    uint32_t playPosMS = rc->change_ntf.event_parameter.play_pos;
+                    break;
             }
             break;
         default:
