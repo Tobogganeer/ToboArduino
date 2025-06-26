@@ -16,6 +16,7 @@ void setup()
 {
     // Streams audio data to the ESP32
     audio.begin();
+    audio.setDiscoverable(false); // Set non-discoverable by default - user will go into settings and pair new device
 
     // Tries reconnecting to last 5 connected devices
     audio.reconnect();
@@ -34,7 +35,7 @@ void setup()
         .name = "refreshMetadataTimer"
     };
     esp_timer_create(&timerArgs, &refreshMetadataTimer);
-    esp_timer_start_periodic(&refreshMetadataTimer, METADATA_REFRESH_TIME_MS * 1000); // Units are us
+    esp_timer_start_periodic(refreshMetadataTimer, METADATA_REFRESH_TIME_MS * 1000); // Units are us
 
     // "Subscribe" to callbacks
     audio.devicesSavedCallback = devicesSavedCallback;
@@ -84,7 +85,8 @@ void disconnectedCallback(const esp_bd_addr_t bda, const char* deviceName, int n
 
 void copyMetadataString(uint8_t* dst, String src)
 {
-    int len = min(src.length(), BT_SONG_INFO_MAX_STR_LEN - 1);
+    uint maxLength = BT_SONG_INFO_MAX_STR_LEN - 1; // Leave room at the end
+    int len = min(src.length(), maxLength);
     memcpy(dst, src.c_str(), len);
     dst[len] = 0; // Null-terminate
 }
@@ -97,7 +99,7 @@ void metadataUpdatedCallback()
     copyMetadataString((uint8_t*)&msg.songInfo.title, audio.title);
     copyMetadataString((uint8_t*)&msg.songInfo.artist, audio.artist);
     copyMetadataString((uint8_t*)&msg.songInfo.album, audio.album);
-    msg.trackLengthMS = audio.totalTrackDurationMS;
+    msg.songInfo.trackLengthMS = audio.totalTrackDurationMS;
 
     comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
 }
@@ -174,6 +176,9 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
             break;
         case BT_UPDATE_DEVICE_DELETE:
             audio.deleteDevice(&devices, msg->device);
+            break;
+        case BT_UPDATE_SET_DISCOVERABLE:
+            audio.setDiscoverable(msg->discoverable);
             break;
     }
 }

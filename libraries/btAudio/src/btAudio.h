@@ -32,6 +32,7 @@ class btAudio
     void disconnect();
     void reconnect();
     void setSinkCallback(void (*sinkCallback)(const uint8_t *data, uint32_t len));
+    void setDiscoverable(bool discoverable);
 
     // I2S Audio
     void I2S(int bck, int dout, int ws);

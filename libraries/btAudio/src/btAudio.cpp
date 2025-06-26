@@ -79,10 +79,15 @@ void btAudio::begin()
     esp_a2d_register_callback(a2d_cb);
 
     // set discoverable and connectable mode, wait to be connected
-#if ESP_IDF_VERSION_MAJOR > 3
-    esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
+    setDiscoverable(true);
+}
+
+void btAudio::setDiscoverable(bool discoverable)
+{
+    #if ESP_IDF_VERSION_MAJOR > 3
+    esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, discoverable ? ESP_BT_GENERAL_DISCOVERABLE : ESP_BT_NON_DISCOVERABLE);
 #else
-    esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+    esp_bt_gap_set_scan_mode(discoverable ? ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE : ESP_BT_SCAN_MODE_CONNECTABLE);
 #endif
 }
 

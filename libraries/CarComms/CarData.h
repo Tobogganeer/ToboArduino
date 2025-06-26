@@ -38,6 +38,7 @@ typedef enum : uint8_t {
 	BT_UPDATE_DEVICE_DELETE,
 	BT_UPDATE_DEVICE_MOVE_UP,
 	BT_UPDATE_DEVICE_MOVE_DOWN,
+	BT_UPDATE_SET_DISCOVERABLE
 } BTTrackUpdateType;
 
 typedef enum : uint8_t {
@@ -124,6 +125,7 @@ typedef struct BTTrackUpdateMsg {
 	union
 	{
 		uint8_t device[6]; // For favouriting, deleting, etc
+		bool discoverable;
 		struct {
 			BTTrackSongPosUpdateType updateType;
 			union {
