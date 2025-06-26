@@ -9,6 +9,7 @@
 btAudio	KEYWORD1
 DRC	KEYWORD1
 filter	KEYWORD1
+PairedDevices	 KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)

@@ -5,33 +5,33 @@
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
-CarComms	KEYWORD1
-CarDataType	KEYWORD2
-Gear	KEYWORD2
-CarInfoMsg	KEYWORD1
-GearMsg	KEYWORD1
-BTInfoMsg	KEYWORD1
-BTSkipMsg	KEYWORD1
-OEMDisplayMsg	KEYWORD1
-ReverseProximityMsg	KEYWORD1
-BuzzerMsg	KEYWORD1
+CarComms	 KEYWORD1
+CarDataType	 KEYWORD2
+Gear	 KEYWORD2
+CarInfoMsg	 KEYWORD1
+GearMsg	 KEYWORD1
+BTInfoMsg	 KEYWORD1
+BTTrackUpdateMsg	 KEYWORD1
+OEMDisplayMsg	 KEYWORD1
+ReverseProximityMsg	 KEYWORD1
+BuzzerMsg	 KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
-begin	KEYWORD2
-send	KEYWORD2
-getLastReceiveTimeMS	KEYWORD2
-getTimeSinceLastReceiveMS	KEYWORD2
-setReceiveTypeMask	KEYWORD2
+begin	 KEYWORD2
+send	 KEYWORD2
+getLastReceiveTimeMS	 KEYWORD2
+getTimeSinceLastReceiveMS	 KEYWORD2
+setReceiveTypeMask	 KEYWORD2
 
 #######################################
 # Constants (LITERAL1)
 #######################################
-ID_CARINFO	LITERAL1
-ID_GEAR	LITERAL1
-ID_BT_INFO	LITERAL1
-ID_BT_SKIP	LITERAL1
-ID_OEM_DISPLAY	LITERAL1
-ID_REVERSEPROXIMITY	LITERAL1
-ID_BUZZER	LITERAL1
+ID_CARINFO	 LITERAL1
+ID_GEAR	 LITERAL1
+ID_BT_INFO	 LITERAL1
+ID_BT_SKIP	 LITERAL1
+ID_OEM_DISPLAY	 LITERAL1
+ID_REVERSEPROXIMITY	 LITERAL1
+ID_BUZZER	 LITERAL1

@@ -127,6 +127,8 @@ typedef struct BTTrackUpdateMsg {
 			// TODO: Make an enum?
 			bool forward;
 			bool reverse;
+			bool pause;
+			bool play;
 		} skipUpdate;
 	};
 	
