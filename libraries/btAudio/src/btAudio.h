@@ -52,6 +52,8 @@ class btAudio
     static void loadDevices(PairedDevices* devices);
     static void updateDevices(PairedDevices* devices, esp_bd_addr_t bda, const char* deviceName, int nameLen);
     static uint8_t getDeviceIndex(const PairedDevices* devices, esp_bd_addr_t bda);
+    static void moveDeviceUp(PairedDevices* devices, esp_bd_addr_t bda);
+    static void moveDeviceDown(PairedDevices* devices, esp_bd_addr_t bda);
     static void deleteDevice(PairedDevices* devices, esp_bd_addr_t bda);
     static void favouriteDevice(PairedDevices* devices, esp_bd_addr_t bda);
 
@@ -66,6 +68,8 @@ class btAudio
     static void gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param);
 
     static void btConnected(uint8_t *bda);
+
+    static void swapDevices(PairedDevices* devices, uint8_t a, uint8_t b);
 
     // bluetooth address of connected device
     static uint8_t _address[6];

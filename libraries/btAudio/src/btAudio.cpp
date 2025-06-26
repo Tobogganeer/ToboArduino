@@ -429,6 +429,9 @@ void btAudio::updateDevices(PairedDevices* devices, esp_bd_addr_t bda, const cha
 
 uint8_t btAudio::getDeviceIndex(const PairedDevices* devices, esp_bd_addr_t bda)
 {
+    if (!devices || devices->count == 0)
+        return 255;
+
     for (uint8_t i = 0; i < devices->count; i++)
     {
         // Check if addresses match
@@ -438,11 +441,30 @@ uint8_t btAudio::getDeviceIndex(const PairedDevices* devices, esp_bd_addr_t bda)
     return 255;
 }
 
-void btAudio::deleteDevice(PairedDevices* devices, esp_bd_addr_t bda)
+void btAudio::swapDevices(PairedDevices* devices, uint8_t a, uint8_t b)
 {
-    if (!devices || devices->count == 0)
-        return;
+    esp_bd_addr_t swapBda;
+    char swapName[MAX_DEVICE_NAME_LENGTH];
 
+    // Swap addresses
+    memcpy(swapBda, devices->addresses[a], sizeof(esp_bd_addr_t));
+    memcpy(devices->addresses[a], devices->addresses[b], sizeof(esp_bd_addr_t));
+    memcpy(devices->addresses[b], swapBda, sizeof(esp_bd_addr_t));
+
+    // Swap names
+    memcpy(swapName, devices->deviceNames[a], MAX_DEVICE_NAME_LENGTH);
+    memcpy(devices->deviceNames[a], devices->deviceNames[b], MAX_DEVICE_NAME_LENGTH);
+    memcpy(devices->deviceNames[b], swapName, MAX_DEVICE_NAME_LENGTH);
+
+    // Swap favourite, if applicable
+    if (devices->favourite == a)
+        devices->favourite = b;
+    else if (devices->favourite == b)
+        devices->favourite = a;
+}
+
+void btAudio::moveDeviceUp(PairedDevices* devices, esp_bd_addr_t bda)
+{
     uint8_t deviceIndex = getDeviceIndex(devices, bda);
     // Return if device not found in list
     if (deviceIndex == 255)
@@ -451,22 +473,56 @@ void btAudio::deleteDevice(PairedDevices* devices, esp_bd_addr_t bda)
         return;
     }
 
-    //
+    // Check if device is already #1 (favourite) or #2 (first paired after favourite)
+    if (deviceIndex <= 1)
+        return;
 
-    for (int i = devices->count - 1; i > deviceIndex; i--)
+    swapDevices(devices, deviceIndex, deviceIndex - 1);
+    saveDevices(devices);
+}
+
+void btAudio::moveDeviceDown(PairedDevices* devices, esp_bd_addr_t bda)
+{
+    uint8_t deviceIndex = getDeviceIndex(devices, bda);
+    // Return if device not found in list
+    if (deviceIndex == 255)
     {
-
+        log_w("Tried to delete device, but couldn't find it in devices list");
+        return;
     }
 
+    // Check if device is already last or is the favourite (fav is always at the top)
+    if (deviceIndex == devices->count - 1 || deviceIndex == devices->favourite)
+        return;
+
+    swapDevices(devices, deviceIndex, deviceIndex + 1);
+    saveDevices(devices);
+}
+
+void btAudio::deleteDevice(PairedDevices* devices, esp_bd_addr_t bda)
+{
+    uint8_t deviceIndex = getDeviceIndex(devices, bda);
+    // Return if device not found in list
+    if (deviceIndex == 255)
+    {
+        log_w("Tried to delete device, but couldn't find it in devices list");
+        return;
+    }
+
+    // Move every device up 1 (down one index). Make sure we don't copy from out of bounds
+    for (int i = deviceIndex; i < MAX_PAIRED_DEVICES - 2; i++)
+    {
+        memcpy(devices->addresses[i], devices->addresses[i+1], sizeof(esp_bd_addr_t));
+        memcpy(devices->deviceNames[i], devices->deviceNames[i+1], MAX_DEVICE_NAME_LENGTH);
+    }
+
+    // Don't worry about zero-ing the last one, decreasing the count should avoid us fiddling with it
     devices->count--;
     saveDevices(devices);
 }
 
 void btAudio::favouriteDevice(PairedDevices* devices, esp_bd_addr_t bda)
 {
-    if (!devices || devices->count == 0)
-        return;
-
     uint8_t deviceIndex = getDeviceIndex(devices, bda);
     // Return if device not found in list
     if (deviceIndex == 255)
