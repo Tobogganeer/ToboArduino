@@ -11,10 +11,20 @@ int32_t btAudio::_sampleRate = 44100;
 String btAudio::title = "";
 String btAudio::album = "";
 String btAudio::artist = "";
+uint32_t btAudio::totalTrackDurationMS = 0;
+uint32_t btAudio::currentTrackPosMS = 0;
 String btAudio::sourceDeviceName = "";
 
 bool btAudio::avrcConnected = false;
 esp_bd_addr_t btAudio::connectedAddress;
+
+void (*btAudio::connectedCallback)(const esp_bd_addr_t bda, const char *deviceName, int nameLen);
+void (*btAudio::disconnectedCallback)(const esp_bd_addr_t bda, const char *deviceName, int nameLen);
+void (*btAudio::devicesSavedCallback)(const PairedDevices *devices);
+void (*btAudio::metadataUpdatedCallback)();
+void (*btAudio::playStatusChangedCallback)(esp_avrc_playback_stat_t status);
+void (*btAudio::trackChangedCallback)();
+void (*btAudio::playPositionChangedCallback)(uint32_t playPosMS);
 
 Preferences preferences;
 
@@ -105,7 +115,7 @@ void btAudio::tryReconnectNextDevice()
     esp_a2d_sink_connect(*addr);
 
     // Start timeout timer
-    esp_timer_stop(reconnectTimer);  // Stop before (re)starting
+    esp_timer_stop(reconnectTimer);                                     // Stop before (re)starting
     esp_timer_start_once(reconnectTimer, RECONNECT_TIMEOUT_MS * 1000);  // Convert to us from ms
 }
 
@@ -140,6 +150,13 @@ void btAudio::reconnect()
 void btAudio::disconnect()
 {
     esp_a2d_sink_disconnect(_address);
+
+    // Clear metadata
+    title = "";
+    artist = "";
+    album = "";
+    totalTrackDurationMS = 0;
+    sourceDeviceName = "";
 }
 
 void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
@@ -170,6 +187,16 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                 }
                 else if (a2d->conn_stat.state == ESP_A2D_CONNECTION_STATE_DISCONNECTED)
                 {
+                    if (disconnectedCallback != nullptr)
+                    {
+                        if (deviceList.count == 0)
+                            loadDevices(&deviceList);
+
+                        uint8_t index = getDeviceIndex(&deviceList, _address);
+                        if (index != 255)
+                            disconnectedCallback(_address, deviceList.deviceNames[index], MAX_DEVICE_NAME_LENGTH);
+                    }
+
                     if (reconnecting)
                     {
                         // Stop timer early if we fail quickly
@@ -227,7 +254,7 @@ void btAudio::updateMeta()
         log_w("Tried to update metadata while not connected to AVRC");
         return;
     }
-    uint8_t attr_mask = ESP_AVRC_MD_ATTR_TITLE | ESP_AVRC_MD_ATTR_ARTIST | ESP_AVRC_MD_ATTR_ALBUM;
+    uint8_t attr_mask = ESP_AVRC_MD_ATTR_TITLE | ESP_AVRC_MD_ATTR_ARTIST | ESP_AVRC_MD_ATTR_ALBUM | ESP_AVRC_MD_ATTR_PLAYING_TIME;
     esp_avrc_ct_send_metadata_cmd(1, attr_mask);
 }
 void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
@@ -263,31 +290,33 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                 switch (rc->meta_rsp.attr_id)
                 {
                     case ESP_AVRC_MD_ATTR_TITLE:
-                        //Serial.print("Title: ");
-                        //Serial.println(mystr);
                         title = mystr;
                         break;
                     case ESP_AVRC_MD_ATTR_ARTIST:
-                        //Serial.print("Artist: ");
-                        //Serial.println(mystr);
                         artist = mystr;
                         break;
                     case ESP_AVRC_MD_ATTR_ALBUM:
-                        //Serial.print("Album: ");
-                        //Serial.println(mystr);
                         album = mystr;
+                        break;
+                    case ESP_AVRC_MD_ATTR_PLAYING_TIME:
+                        // Usually a string like "183000" (ms)
+                        totalTrackDurationMS = atoi(attr_text);
                         break;
                 }
                 free(attr_text);
+                if (metadataUpdatedCallback)
+                    metadataUpdatedCallback();
             }
             break;
         case ESP_AVRC_CT_CHANGE_NOTIFY_EVT:
-            uint8_t event = rc->change_ntf.event_id;
-            switch (event)
+            uint8_t eventID = rc->change_ntf.event_id;
+            switch (eventID)
             {
                 case ESP_AVRC_RN_PLAY_STATUS_CHANGE:
                     // TODO: Message about track being paused (or maybe do nothing?)
                     esp_avrc_playback_stat_t playback = rc->change_ntf.event_parameter.playback;
+                    if (playStatusChangedCallback)
+                        playStatusChangedCallback(playback);
                     /*
                     ESP_AVRC_PLAYBACK_STOPPED = 0
                     ESP_AVRC_PLAYBACK_PLAYING = 1
@@ -299,10 +328,15 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                 case ESP_AVRC_RN_TRACK_CHANGE:
                     // TODO: Send ESP-NOW message as track has changed + update metadata
                     // rc->change_ntf.event_parameter.elm_id is a uint8_t[8], just a song ID used to get metadata
+                    if (trackChangedCallback)
+                        trackChangedCallback();
                     break;
                 case ESP_AVRC_RN_PLAY_POS_CHANGED:
                     // TODO: Message about play pos
                     uint32_t playPosMS = rc->change_ntf.event_parameter.play_pos;
+                    currentTrackPosMS = playPosMS;
+                    if (playPositionChangedCallback)
+                        playPositionChangedCallback(playPosMS);
                     break;
             }
             break;
@@ -324,8 +358,9 @@ void btAudio::gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
                 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/bluetooth/esp_gap_bt.html#_CPPv4N21esp_bt_gap_cb_param_t19read_rmt_name_param8rmt_nameE
                 sourceDeviceName = String(param->read_rmt_name.rmt_name);
                 // Update name of saved device
-                addOrUpdateDevice(&deviceList, _address, sourceDeviceName.c_str(), sourceDeviceName.length()); // Not null here as we checked in the A2D callback
-                // TODO: Send message?
+                addOrUpdateDevice(&deviceList, _address, sourceDeviceName.c_str(), sourceDeviceName.length());  // Not null here as we checked in the A2D callback
+                if (connectedCallback != nullptr)
+                    connectedCallback(_address, sourceDeviceName.c_str(), sourceDeviceName.length());
             }
             else
             {
@@ -411,11 +446,51 @@ void btAudio::volume(float vol)
 
 
 
+
+
+void btAudio::play()
+{
+    if (!avrcConnected) return;
+    esp_avrc_ct_send_passthrough_cmd(1, ESP_AVRC_PT_CMD_PLAY, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    esp_avrc_ct_send_passthrough_cmd(1, ESP_AVRC_PT_CMD_PLAY, ESP_AVRC_PT_CMD_STATE_RELEASED);
+}
+
+void btAudio::pause()
+{
+    if (!avrcConnected) return;
+    esp_avrc_ct_send_passthrough_cmd(1, ESP_AVRC_PT_CMD_PAUSE, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    esp_avrc_ct_send_passthrough_cmd(1, ESP_AVRC_PT_CMD_PAUSE, ESP_AVRC_PT_CMD_STATE_RELEASED);
+}
+
+void btAudio::next()
+{
+    if (!avrcConnected) return;
+    esp_avrc_ct_send_passthrough_cmd(1, ESP_AVRC_PT_CMD_FORWARD, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    esp_avrc_ct_send_passthrough_cmd(1, ESP_AVRC_PT_CMD_FORWARD, ESP_AVRC_PT_CMD_STATE_RELEASED);
+}
+
+void btAudio::previous()
+{
+    if (!avrcConnected) return;
+    esp_avrc_ct_send_passthrough_cmd(1, ESP_AVRC_PT_CMD_BACKWARD, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    esp_avrc_ct_send_passthrough_cmd(1, ESP_AVRC_PT_CMD_BACKWARD, ESP_AVRC_PT_CMD_STATE_RELEASED);
+}
+
+
+
+
+
+
+
+
 void btAudio::saveDevices(const PairedDevices *devices)
 {
     preferences.begin(PREF_NAMESPACE, false);
     preferences.putBytes(PREF_KEY, devices, sizeof(PairedDevices));
     preferences.end();
+
+    if (devicesSavedCallback != nullptr)
+        devicesSavedCallback(devices);
 }
 
 void btAudio::loadDevices(PairedDevices *devices)
@@ -470,9 +545,9 @@ void btAudio::addOrUpdateDevice(PairedDevices *devices, esp_bd_addr_t bda, const
 
     // Copy address and name into the proper slot
     memcpy(devices->addresses[deviceIndex], bda, sizeof(esp_bd_addr_t));
-    int len = nameLen > MAX_DEVICE_NAME_LENGTH ? MAX_DEVICE_NAME_LENGTH : nameLen;
+    int len = nameLen > 0 ? min(nameLen, MAX_DEVICE_NAME_LENGTH - 1) : 0;
     memcpy(devices->deviceNames[deviceIndex], deviceName, len);
-    devices->deviceNames[deviceIndex][len - 1] = '\0'; // Make sure we null-terminate
+    devices->deviceNames[deviceIndex][len - 1] = '\0';  // Make sure we null-terminate
 
     saveDevices(devices);
 }
@@ -583,7 +658,10 @@ void btAudio::favouriteDevice(PairedDevices *devices, esp_bd_addr_t bda)
 
     // Not the most efficient, but keep swapping up until we reach the top (lowest index)
     while (deviceIndex > 0)
-        swapDevices(devices, deviceIndex, deviceIndex--);
+    {
+        swapDevices(devices, deviceIndex, deviceIndex - 1);
+        deviceIndex--;
+    }
 
     devices->favourite = 0;
     saveDevices(devices);

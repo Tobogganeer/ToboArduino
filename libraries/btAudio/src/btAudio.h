@@ -40,13 +40,28 @@ class btAudio
     // meta data
     void updateMeta();
 
+    static void (*devicesSavedCallback)(const PairedDevices* devices);
+    static void (*connectedCallback)(const esp_bd_addr_t bda, const char* deviceName, int nameLen);
+    static void (*disconnectedCallback)(const esp_bd_addr_t bda, const char* deviceName, int nameLen);
+    static void (*metadataUpdatedCallback)();
+    static void (*playStatusChangedCallback)(esp_avrc_playback_stat_t status);
+    static void (*trackChangedCallback)();
+    static void (*playPositionChangedCallback)(uint32_t playPosMS);
+
     static String title;
     static String artist;
     static String album;
+    static uint32_t totalTrackDurationMS;
+    static uint32_t currentTrackPosMS;
     static String sourceDeviceName;
 
     static bool avrcConnected;
     static esp_bd_addr_t avrcAddress;
+
+    void play();
+    void pause();
+    void next();
+    void previous();
 
     static void saveDevices(const PairedDevices* devices);
     static void loadDevices(PairedDevices* devices);
@@ -61,7 +76,7 @@ class btAudio
     const char* _devName;
     static int32_t _sampleRate;
 
-    void tryReconnectNextDevice();
+    static void tryReconnectNextDevice();
     static void reconnectTimeoutCB(void*);
 
     // static function causes a static infection of variables

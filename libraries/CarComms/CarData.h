@@ -26,12 +26,16 @@ typedef enum : uint8_t {
 
 typedef enum : uint8_t {
 	BT_INFO_SONG,
-	BT_INFO_DEVICE
+	BT_INFO_DEVICES
 } BTInfoType;
 
 typedef enum : uint8_t {
 	BT_UPDATE_SONG_POS,
-	BT_UPDATE_SKIP
+	BT_UPDATE_SKIP,
+	BT_UPDATE_DEVICE_FAVOURITE,
+	BT_UPDATE_DEVICE_DELETE,
+	BT_UPDATE_DEVICE_MOVE_UP,
+	BT_UPDATE_DEVICE_MOVE_DOWN,
 } BTTrackUpdateType;
 
 typedef enum : uint8_t {
@@ -112,6 +116,7 @@ typedef struct BTTrackUpdateMsg {
 
 	union
 	{
+		uint8_t device[6]; // For favouriting, deleting, etc
 		struct {
 			BTTrackSongPosUpdateType updateType;
 			union {
