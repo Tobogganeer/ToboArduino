@@ -25,8 +25,10 @@ typedef enum : uint8_t {
 } Gear;
 
 typedef enum : uint8_t {
-	BT_INFO_SONG,
-	BT_INFO_DEVICES
+	BT_INFO_METADATA,
+	BT_INFO_DEVICES,
+	BT_INFO_CONNECTED,
+	BT_INFO_DISCONNECTED,
 } BTInfoType;
 
 typedef enum : uint8_t {
@@ -88,6 +90,7 @@ typedef struct GearMsg {
 	Gear gear;
 } GearMsg;
 
+// Larger chunks of info
 typedef struct BTInfoMsg {
 	BTInfoType type; // 1 byte
 
@@ -96,7 +99,7 @@ typedef struct BTInfoMsg {
 			char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
 			char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
 			char album[BT_SONG_INFO_MAX_STR_LEN]; // 192
-			uint32_t trackLength; // 196
+			uint32_t trackLengthMS; // 196
 		} songInfo;
 		struct {
 			// Extracting constants from btAduio.h
@@ -105,11 +108,16 @@ typedef struct BTInfoMsg {
 			char deviceNames[5][32]; // 5 x 32 = 160
 			uint8_t count; // 161
 			uint8_t favourite; // 162
-		} deviceInfo;
+		} devices;
+		struct {
+			uint8_t address[6];
+			char deviceName[32];
+		} sourceDevice;
 	};
 	
 } BTInfoMsg;
 
+// Smaller updates
 typedef struct BTTrackUpdateMsg {
 	BTTrackUpdateType type;
 

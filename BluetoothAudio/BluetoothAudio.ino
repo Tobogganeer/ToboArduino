@@ -53,40 +53,82 @@ void refreshMetadata(void* arg)
         audio.updateMeta();
 }
 
-static void devicesSavedCallback(const PairedDevices* devices)
+void devicesSavedCallback(const PairedDevices* devices)
+{
+    // Send device list out when saved (they are saved whenever modified)
+    BTInfoMsg msg;
+    msg.type = BTInfoType::BT_INFO_DEVICES;
+    memcpy(&msg.devices, devices, sizeof(PairedDevices));
+    comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
+}
+
+void connectedCallback(const esp_bd_addr_t bda, const char* deviceName, int nameLen)
 {
     BTInfoMsg msg;
-    //msg.type = BTInfoType::
+    msg.type = BTInfoType::BT_INFO_CONNECTED;
+    memcpy(&msg.sourceDevice.address, &bda, sizeof(esp_bd_addr_t));
+    memcpy(&msg.sourceDevice.deviceName, deviceName, min(nameLen, 32));
+    msg.sourceDevice.deviceName[31] = 0; // Null-terminate last character (name limit is 32 chars);
+    comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
 }
 
-static void connectedCallback(const esp_bd_addr_t bda, const char* deviceName, int nameLen)
+void disconnectedCallback(const esp_bd_addr_t bda, const char* deviceName, int nameLen)
 {
-
+    BTInfoMsg msg;
+    msg.type = BTInfoType::BT_INFO_DISCONNECTED;
+    memcpy(&msg.sourceDevice.address, &bda, sizeof(esp_bd_addr_t));
+    memcpy(&msg.sourceDevice.deviceName, deviceName, min(nameLen, 32));
+    msg.sourceDevice.deviceName[31] = 0; // Null-terminate last character (name limit is 32 chars);
+    comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
 }
 
-static void disconnectedCallback(const esp_bd_addr_t bda, const char* deviceName, int nameLen)
+void copyMetadataString(uint8_t* dst, String src)
 {
-
+    int len = min(src.length(), BT_SONG_INFO_MAX_STR_LEN - 1);
+    memcpy(dst, src.c_str(), len);
+    dst[len] = 0; // Null-terminate
 }
 
-static void metadataUpdatedCallback()
+void metadataUpdatedCallback()
 {
+    BTInfoMsg msg;
+    msg.type = BTInfoType::BT_INFO_METADATA;
 
+    copyMetadataString((uint8_t*)&msg.songInfo.title, audio.title);
+    copyMetadataString((uint8_t*)&msg.songInfo.artist, audio.artist);
+    copyMetadataString((uint8_t*)&msg.songInfo.album, audio.album);
+    msg.trackLengthMS = audio.totalTrackDurationMS;
+
+    comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
 }
 
-static void playStatusChangedCallback(esp_avrc_playback_stat_t status)
+void playStatusChangedCallback(esp_avrc_playback_stat_t status)
 {
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SONG_POS;
+    msg.songUpdate.updateType = BTTrackSongPosUpdateType::BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE;
+    msg.songUpdate.playback = status;
 
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
 }
 
-static void trackChangedCallback()
+void trackChangedCallback()
 {
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SONG_POS;
+    msg.songUpdate.updateType = BTTrackSongPosUpdateType::BT_SONG_POS_UPDATE_TRACK_CHANGE;
 
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
 }
 
-static void playPositionChangedCallback(uint32_t playPosMS)
+void playPositionChangedCallback(uint32_t playPosMS)
 {
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SONG_POS;
+    msg.songUpdate.updateType = BTTrackSongPosUpdateType::BT_SONG_POS_UPDATE_PLAY_POS_CHANGED;
+    msg.songUpdate.playPosMS = playPosMS;
 
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
 }
 
 
