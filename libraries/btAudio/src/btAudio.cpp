@@ -17,6 +17,9 @@ esp_bd_addr_t btAudio::connectedAddress;
 
 Preferences preferences;
 
+#define PREF_NAMESPACE "bt_devices"
+#define PREF_KEY "devices"
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////// Constructor /////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -44,10 +47,10 @@ void btAudio::begin()
     // initialize AVRCP controller
     esp_avrc_ct_init();
     esp_avrc_ct_register_callback(avrc_callback);
-    esp_bt_gap_register_callback()
+    esp_bt_gap_register_callback(gap_cb);
 
-      // this sets up the audio receive
-      esp_a2d_sink_init();
+    // this sets up the audio receive
+    esp_a2d_sink_init();
 
     esp_a2d_register_callback(a2d_cb);
 
@@ -70,7 +73,7 @@ void btAudio::end()
 void btAudio::reconnect()
 {
     // Load rememebered device address from flash
-    preferences.begin("btAudio", false);
+    preferences.begin(PREF_NAMESPACE, false);
     _address[0] = preferences.getUChar("btaddr0", 0);
     _address[1] = preferences.getUChar("btaddr1", 0);
     _address[2] = preferences.getUChar("btaddr2", 0);
@@ -96,9 +99,9 @@ void btAudio::disconnect()
     esp_a2d_sink_disconnect(_address);
 }
 
-void btConnected(uint8_t *bda)
+void btAudio::btConnected(esp_bd_addr_t bda)
 {
-    esp_bt_gap_read_remote_name(remote_bda);
+    esp_bt_gap_read_remote_name(bda);
 }
 
 void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
@@ -108,7 +111,8 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
     {
         case ESP_A2D_CONNECTION_STATE_EVT:
             {
-                uint8_t *temp = a2d->conn_stat.remote_bda;
+                esp_bd_addr_t temp = a2d->conn_stat.remote_bda;
+                // TODO: Handle ESP_A2D_CONNECTION_STATE_DISCONNECTED, ESP_A2D_CONNECTION_STATE_DISCONNECTING
                 if (a2d->conn_stat.state == ESP_A2D_CONNECTION_STATE_CONNECTED)
                 {
                     _address[0] = *temp;
@@ -119,7 +123,7 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                     _address[5] = *(temp + 5);
                     ESP_LOGI("btAudio", "Connected to BT device: %d %d %d %d %d %d", _address[0], _address[1], _address[2], _address[3], _address[4], _address[5]);
 
-                    btConnected();
+                    btConnected(conn_stat.remote_bda);
 
                     // Store connected BT address for use by reconnect()
                     preferences.begin("btAudio", false);
@@ -377,4 +381,101 @@ void btAudio::i2sCallback(const uint8_t *data, uint32_t len)
 void btAudio::volume(float vol)
 {
     _vol = constrain(vol, 0, 1);
+}
+
+
+
+void btAudio::saveDevices(const PairedDevices* devices)
+{
+    preferences.begin(PREF_NAMESPACE, false);
+    preferences.putBytes(PREF_KEY, devices, sizeof(PairedDevices));
+    preferences.end(); 
+}
+
+void btAudio::loadDevices(PairedDevices* devices)
+{
+    preferences.begin(PREF_NAMESPACE, true);
+    // Check if there area no saved devices
+    if (!preferences.isKey(PREF_KEY))
+    {
+        // Save a blank copy
+        preferences.end();
+        preferences.begin(PREF_NAMESPACE, false); // Open in r/w mode
+        PairedDevices empty = {0};
+        preferences.putBytes(PREF_KEY, empty, sizeof(PairedDevices));
+    }
+    preferences.getBytes(PREF_KEY, devices, sizeof(PairedDevices));
+    preferences.end(); 
+}
+
+/*
+
+typedef struct PairedDevices {
+    esp_bd_addr_t addresses[MAX_PAIRED_DEVICES]; // 5 x 6 = 30 bytes
+    char deviceNames[MAX_PAIRED_DEVICES][MAX_DEVICE_NAME_LENGTH]; // 5 x 32 = 160
+    uint8_t count;
+    uint8_t favourite;
+} PairedDevices;
+
+*/
+
+void btAudio::updateDevices(PairedDevices* devices, esp_bd_addr_t bda, const char* deviceName, int nameLen)
+{
+    if (!devices)
+        return;
+
+
+}
+
+uint8_t btAudio::getDeviceIndex(const PairedDevices* devices, esp_bd_addr_t bda)
+{
+    for (uint8_t i = 0; i < devices->count; i++)
+    {
+        // Check if addresses match
+        if (memcmp(devices->addresses[i], bda, sizeof(esp_bd_addr_t)) == 0)
+            return i;
+    }
+    return 255;
+}
+
+void btAudio::deleteDevice(PairedDevices* devices, esp_bd_addr_t bda)
+{
+    if (!devices || devices->count == 0)
+        return;
+
+    uint8_t deviceIndex = getDeviceIndex(devices, bda);
+    // Return if device not found in list
+    if (deviceIndex == 255)
+    {
+        log_w("Tried to delete device, but couldn't find it in devices list");
+        return;
+    }
+
+    //
+
+    for (int i = devices->count - 1; i > deviceIndex; i--)
+    {
+
+    }
+
+    devices->count--;
+    saveDevices(devices);
+}
+
+void btAudio::favouriteDevice(PairedDevices* devices, esp_bd_addr_t bda)
+{
+    if (!devices || devices->count == 0)
+        return;
+
+    uint8_t deviceIndex = getDeviceIndex(devices, bda);
+    // Return if device not found in list
+    if (deviceIndex == 255)
+    {
+        log_w("Tried to favourite device, but couldn't find it in devices list");
+        return;
+    }
+
+    // TODO: Change actual order of list?
+    devices->favourite = deviceIndex;
+    saveDevices(devices);
 }
