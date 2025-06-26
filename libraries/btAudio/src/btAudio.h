@@ -61,6 +61,9 @@ class btAudio
     const char* _devName;
     static int32_t _sampleRate;
 
+    void tryReconnectNextDevice();
+    static void reconnectTimeoutCB(void*);
+
     // static function causes a static infection of variables
     static void i2sCallback(const uint8_t *data, uint32_t len);
     static void a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param);
