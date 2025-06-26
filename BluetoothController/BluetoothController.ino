@@ -7,42 +7,19 @@ This board will communicate via ESP-NOW and drive the display/settings
 
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include "CarComms.h"
+#include <CarComms.h>
+#include "Icons.h"
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
+CarComms comms(handleCarData);
 
-uint8_t songIcon[8] = {
-    0b00000,
-    0b01100,
-    0b01011,
-    0b01001,
-    0b01001,
-    0b11011,
-    0b11011,
-    0b00000,
-};
-
-uint8_t artistIcon[8] = {
-    0b01110,
-    0b11111,
-    0b11111,
-    0b01110,
-    0b00000,
-    0b01110,
-    0b11111,
-    0b00000,
-};
-
-uint8_t albumIcon[8] = {
-    0b00000,
-    0b01110,
-    0b11111,
-    0b11011,
-    0b11111,
-    0b01110,
-    0b00000,
-    0b00000,
-};
+// Taken from esp_avrc_playback_stat_t
+#define PLAYBACK_STOPPED 0
+#define PLAYBACK_PLAYING 1
+#define PLAYBACK_PAUSED 2
+#define PLAYBACK_FWD_SEEK 3
+#define PLAYBACK_REV_SEEK 4
+#define PLAYBACK_ERROR 0xFF
 
 /*
 Splash screen
@@ -60,11 +37,17 @@ void setup()
 {
     lcd.init();
     lcd.backlight();
-    lcd.createChar(0, songIcon);
-    lcd.createChar(1, artistIcon);
-    lcd.createChar(2, albumIcon);
+    
+    initIcons(); // Icons.h
 
-    // Splash screen
+    splashScreen();
+
+    comms.begin();
+    comms.receiveTypeMask = CarDataType::ID_BT_TRACK_UPDATE | CarDataType::ID_BT_INFO;
+}
+
+void splashScreen()
+{
     lcd.setCursor(3, 0);
     lcd.print("Goofy ah car");
     lcd.setCursor(7, 1);
@@ -73,6 +56,76 @@ void setup()
     lcd.print("Evan Daveikis");
     lcd.setCursor(2, 3);
     lcd.print("System booting...");
+}
+
+void handleCarData(CarDataType type, const uint8_t* data, int len)
+{
+    if (type == ID_BT_TRACK_UPDATE)
+    {
+        BTTrackUpdateMsg* msg = (BTTrackUpdateMsg*)data;
+        
+        switch (msg->type)
+        {
+            case BT_UPDATE_SONG_POS:
+            {
+                switch (msg->songUpdate.updateType)
+                {
+                    case BT_SONG_POS_UPDATE_TRACK_CHANGE:
+                        break;
+                    case BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE:
+                        // msg->songUpdate.
+                        // uint8_t playback; // esp_avrc_playback_stat_t
+                        break;
+                    case BT_SONG_POS_UPDATE_PLAY_POS_CHANGED:
+                        // msg->songUpdate.
+                        // uint32_t playPosMS;
+                        break;
+                }
+                break;
+            }
+        }
+    }
+    else if (type == ID_BT_INFO)
+    {
+        BTInfoMsg* msg = (BTInfoMsg*)data;
+
+        switch (msg->type)
+        {
+            case BT_INFO_METADATA:
+            {
+                // msg->songInfo.
+                // char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
+                // char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
+                // char album[BT_SONG_INFO_MAX_STR_LEN]; // 192
+                // uint32_t trackLengthMS; // 196
+                break;
+            }
+            case BT_INFO_DEVICES:
+            {
+                // msg->devices.
+                // uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
+                // char deviceNames[5][32]; // 5 x 32 = 160
+                // uint8_t count; // 161
+                // uint8_t favourite; // 162
+                // uint8_t connected; // 163
+                break;
+            }
+            case BT_INFO_CONNECTED:
+            {
+                // msg->sourceDevice.
+                // uint8_t address[6];
+			    // char deviceName[32];
+                break;
+            }
+            case BT_INFO_DISCONNECTED:
+            {
+                // msg->sourceDevice.
+                // uint8_t address[6];
+			    // char deviceName[32];
+                break;
+            }
+        }
+    }
 }
 
 
