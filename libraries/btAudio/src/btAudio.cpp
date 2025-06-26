@@ -268,6 +268,7 @@ void btAudio::updateMeta()
         log_w("Tried to update metadata while not connected to AVRC");
         return;
     }
+    //log_i("Sent metadata request to device");
     uint8_t attr_mask = ESP_AVRC_MD_ATTR_TITLE | ESP_AVRC_MD_ATTR_ARTIST | ESP_AVRC_MD_ATTR_ALBUM | ESP_AVRC_MD_ATTR_PLAYING_TIME;
     esp_avrc_ct_send_metadata_cmd(1, attr_mask);
 }
@@ -287,6 +288,7 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
 
                 if (avrcConnected)
                 {
+                    log_i("AVRC connected");
                     // Ask it to tell us when the time, track etc changes every 1000ms
                     uint8_t attr_mask = ESP_AVRC_RN_PLAY_STATUS_CHANGE | ESP_AVRC_RN_TRACK_CHANGE | ESP_AVRC_RN_PLAY_POS_CHANGED;
                     esp_avrc_ct_send_register_notification_cmd(1, attr_mask, 200);
@@ -328,10 +330,12 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
         case ESP_AVRC_CT_CHANGE_NOTIFY_EVT:
             {
                 uint8_t eventID = rc->change_ntf.event_id;
+                log_i("AVRC CT Change event (BT_UPDATE): %d", eventID);
                 switch (eventID)
                 {
                     case ESP_AVRC_RN_PLAY_STATUS_CHANGE:
                         {
+                            log_i("Play status changed");
                             // TODO: Message about track being paused (or maybe do nothing?)
                             esp_avrc_playback_stat_t playback = rc->change_ntf.event_parameter.playback;
                             if (playStatusChangedCallback)
@@ -355,6 +359,7 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                         }
                     case ESP_AVRC_RN_PLAY_POS_CHANGED:
                         {
+                            log_i("Play position changed");
                             // TODO: Message about play pos
                             uint32_t playPosMS = rc->change_ntf.event_parameter.play_pos;
                             currentTrackPosMS = playPosMS;

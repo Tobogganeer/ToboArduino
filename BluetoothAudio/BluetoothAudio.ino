@@ -14,8 +14,15 @@ esp_timer_handle_t sendDeviceInfoTimer;
 
 // https://www.youtube.com/watch?v=QixtxaAda18
 
+//#define DEBUG
+
 void setup()
 {
+#ifdef DEBUG
+    Serial.begin(115200);
+    esp_log_level_set("*", ESP_LOG_INFO);
+#endif
+
     // Streams audio data to the ESP32
     audio.begin();
     audio.setDiscoverable(false); // Set non-discoverable by default - user will go into settings and pair new device
@@ -37,6 +44,7 @@ void setup()
         .name = "refreshMetadataTimer"
     };
     esp_timer_create(&timerArgs, &refreshMetadataTimer);
+    log_i("Start meta refresh timer");
     esp_timer_start_periodic(refreshMetadataTimer, METADATA_REFRESH_TIME_MS * 1000); // Units are us
 
     esp_timer_create_args_t deviceInfoTimerArgs = {
@@ -59,6 +67,7 @@ void setup()
 void refreshMetadata(void* arg)
 {
     // It will give us the metadataUpdatedCallback when complete
+    log_i("Refresh metadata. AVRC %s", audio.avrcConnected ? "connected" : "not connected");
     if (audio.avrcConnected)
         audio.updateMeta();
 }
@@ -77,11 +86,13 @@ void devicesSavedCallback(const PairedDevices* devices)
     BTInfoMsg msg;
     msg.type = BTInfoType::BT_INFO_DEVICES;
     memcpy(&msg.devices, devices, sizeof(PairedDevices));
-    comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
+    bool success = comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
+    log_i("Sent devices list. Success? %s", success ? "true" : "false");
 }
 
 void connectedCallback(const esp_bd_addr_t bda, const char* deviceName, int nameLen)
 {
+    log_i("Sending Connected message");
     BTInfoMsg msg;
     msg.type = BTInfoType::BT_INFO_CONNECTED;
     memcpy(&msg.sourceDevice.address, &bda, sizeof(esp_bd_addr_t));

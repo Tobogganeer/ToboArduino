@@ -45,6 +45,8 @@ void CarComms::OnDataReceivedStatic(uint8_t* mac, uint8_t* incomingData, uint8_t
     if (instance) {
         instance->OnDataReceived(incomingData, len);
     }
+    else
+        log_e("Didn't find CarComms instance!");
 }
 
 void CarComms::OnDataReceived(const uint8_t* incomingData, uint8_t len) {
@@ -53,7 +55,10 @@ void CarComms::OnDataReceived(const uint8_t* incomingData, uint8_t len) {
         return;
     // Make sure this isn't a stray broadcast or anything - only from car electronics
     if (incomingData[0] != CHECK_BYTE)
+    {
+        log_w("Received ESP-NOW packet with incorrect check byte!");
         return;
+    }
     
     // Do we want to receive this message?
     uint8_t type = incomingData[1];
@@ -91,6 +96,17 @@ void CarComms::begin()
         return;
     }
 
+    esp_now_peer_info_t peerInfo = {};
+    memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+    peerInfo.channel = ESP_NOW_CHANNEL;
+    peerInfo.encrypt = false;
+
+    if (!esp_now_is_peer_exist(broadcastAddress)) {
+        if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+            log_e("Failed to add broadcast peer");
+        }
+    }
+
     // Register receive callback
     #ifdef ARDUINO_ARCH_ESP8266
     esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
@@ -101,16 +117,22 @@ void CarComms::begin()
 bool CarComms::send(CarDataType type, const uint8_t* data, int len)
 {
     // Max length is 250 and we are adding two bytes
-    if (len > 248)
+    if (len > 247)
+    {
+        log_w("Tried sending data over 248 bytes!");
         return false;
+    }
 
     // Prepend data with type and check byte
-    memcpy(dataWithTypeAndCheckByte, data, len);
+    memcpy(&dataWithTypeAndCheckByte[2], data, len);
     dataWithTypeAndCheckByte[0] = CHECK_BYTE;
     dataWithTypeAndCheckByte[1] = type;
     // Send it
-    esp_now_send(broadcastAddress, dataWithTypeAndCheckByte, len + 2);
-    return true;
+    esp_err_t status = esp_now_send(broadcastAddress, dataWithTypeAndCheckByte, len + 2);
+    if (status != ESP_OK)
+        log_e("Error sending ESP_NOW message: %d", status);
+
+    return status == ESP_OK;
 }
 
 uint32_t CarComms::getLastReceiveTimeMS()

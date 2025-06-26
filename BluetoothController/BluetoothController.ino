@@ -8,10 +8,11 @@ This board will communicate via ESP-NOW and drive the display/settings
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <CarComms.h>
-#include "Icons.h"
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 CarComms comms(handleCarData);
+
+#include "Icons.h"
 
 // Taken from esp_avrc_playback_stat_t
 #define PLAYBACK_STOPPED 0
@@ -20,6 +21,8 @@ CarComms comms(handleCarData);
 #define PLAYBACK_FWD_SEEK 3
 #define PLAYBACK_REV_SEEK 4
 #define PLAYBACK_ERROR 0xFF
+
+//#define DEBUG
 
 /*
 Splash screen
@@ -39,6 +42,11 @@ void setup()
     lcd.backlight();
     
     initIcons(); // Icons.h
+
+#ifdef DEBUG
+    Serial.begin(115200);
+    esp_log_level_set("*", ESP_LOG_INFO);
+#endif
 
     splashScreen();
 
@@ -60,6 +68,8 @@ void splashScreen()
 
 void handleCarData(CarDataType type, const uint8_t* data, int len)
 {
+    log_i("Got car data. Type: %d", type);
+
     if (type == ID_BT_TRACK_UPDATE)
     {
         BTTrackUpdateMsg* msg = (BTTrackUpdateMsg*)data;
@@ -93,6 +103,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
         {
             case BT_INFO_METADATA:
             {
+                displayMetadata(msg);
                 // msg->songInfo.
                 // char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
                 // char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
@@ -145,6 +156,32 @@ Current progress
 ===================
 
 */
+
+void displayMetadata(BTInfoMsg* msg)
+{
+    char line[19] = {0};
+
+    lcd.setCursor(0, 0);
+    lcd.write(ICON_SONG);
+    lcd.setCursor(2, 0);
+    memcpy(line, msg->songInfo.title, 18);
+    lcd.print(line);
+
+    lcd.setCursor(0, 1);
+    lcd.write(ICON_ARTIST);
+    lcd.setCursor(2, 1);
+    memcpy(line, msg->songInfo.artist, 18);
+    lcd.print(line);
+
+    lcd.setCursor(0, 2);
+    lcd.write(ICON_ALBUM);
+    lcd.setCursor(2, 2);
+    memcpy(line, msg->songInfo.album, 18);
+    lcd.print(line);
+    
+    lcd.setCursor(0, 3);
+    lcd.print(msg->songInfo.trackLengthMS / 1000);
+}
 
 void loop()
 {
