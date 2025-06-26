@@ -185,6 +185,11 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                     if (deviceList.count == 0)
                         loadDevices(&deviceList);
                     addOrUpdateDevice(&deviceList, _address, "Unknown", 8);
+                    moveDeviceUp(&deviceList, _address); // Move recent connections up
+
+                    // Store and send connected device in case controls initialize a bit later
+                    deviceList.connected = getDeviceIndex(&deviceList, _address);
+                    saveDevices(&deviceList);
 
                     // Get device name
                     esp_bt_gap_read_remote_name(_address);
@@ -197,6 +202,11 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                             loadDevices(&deviceList);
 
                         uint8_t index = getDeviceIndex(&deviceList, _address);
+                        if (deviceList.connected == index)
+                        {
+                            deviceList.connected = 255;
+                            saveDevices(&deviceList);
+                        }
                         if (index != 255)
                             disconnectedCallback(_address, deviceList.deviceNames[index], MAX_DEVICE_NAME_LENGTH);
                     }

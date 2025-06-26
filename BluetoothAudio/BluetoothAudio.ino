@@ -7,8 +7,10 @@ btAudio audio = btAudio("Quandale Dingle's Whip");
 CarComms comms(handleCarData);
 
 esp_timer_handle_t refreshMetadataTimer;
+esp_timer_handle_t sendDeviceInfoTimer;
 
 #define METADATA_REFRESH_TIME_MS 1000
+#define SEND_DEVICE_INFO_TIME_MS 5000
 
 // https://www.youtube.com/watch?v=QixtxaAda18
 
@@ -37,6 +39,13 @@ void setup()
     esp_timer_create(&timerArgs, &refreshMetadataTimer);
     esp_timer_start_periodic(refreshMetadataTimer, METADATA_REFRESH_TIME_MS * 1000); // Units are us
 
+    esp_timer_create_args_t deviceInfoTimerArgs = {
+        .callback = &sendDeviceInfo,
+        .name = "sendDeviceInfoTimer"
+    };
+    esp_timer_create(&deviceInfoTimerArgs, &sendDeviceInfoTimer);
+    esp_timer_start_periodic(sendDeviceInfoTimer, SEND_DEVICE_INFO_TIME_MS * 1000); // Units are us
+
     // "Subscribe" to callbacks
     audio.devicesSavedCallback = devicesSavedCallback;
     audio.connectedCallback = connectedCallback;
@@ -52,6 +61,14 @@ void refreshMetadata(void* arg)
     // It will give us the metadataUpdatedCallback when complete
     if (audio.avrcConnected)
         audio.updateMeta();
+}
+
+void sendDeviceInfo(void* arg)
+{
+    // Send all device info occasionally in case the controls module initializes a bit later (and to keep it up to date)
+    PairedDevices devices;
+    audio.loadDevices(&devices);
+    devicesSavedCallback(&devices);
 }
 
 void devicesSavedCallback(const PairedDevices* devices)

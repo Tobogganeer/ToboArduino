@@ -18,6 +18,7 @@ typedef struct PairedDevices {
     char deviceNames[MAX_PAIRED_DEVICES][MAX_DEVICE_NAME_LENGTH]; // 5 x 32 = 160
     uint8_t count;
     uint8_t favourite;
+    uint8_t connected;
 } PairedDevices;
 
 class btAudio
