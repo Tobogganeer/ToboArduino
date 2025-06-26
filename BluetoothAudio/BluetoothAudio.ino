@@ -1,10 +1,9 @@
 #include <btAudio.h>
-#include "CarDataReceiver.h"
+#include <CarComms.h>
 
 // Sets the name of the audio device
 btAudio audio = btAudio("Quandale Dingle's Whip");
 
-// Temp code just to test if all libs will fit into memory
 // https://www.youtube.com/watch?v=QixtxaAda18
 
 void setup()
@@ -20,17 +19,6 @@ void setup()
     int bck = 5;
     audio.I2S(bck, dout, ws);
     audio.volume(1.0);
-
-    initCarDataReceiver(handleCarData);
-}
-
-
-void handleCarData(CarData* data)
-{
-    Serial.print("Got data. RPM: ");
-    Serial.print(data->rpm);
-    Serial.print(", Speed:");
-    Serial.println(data->speed);
 }
 
 

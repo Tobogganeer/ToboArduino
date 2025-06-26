@@ -96,8 +96,7 @@ typedef struct BTInfoMsg {
 			char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
 			char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
 			char album[BT_SONG_INFO_MAX_STR_LEN]; // 192
-			int length; // 196
-			int currentPlayTime; // 200
+			uint32_t trackLength; // 196
 		} songInfo;
 		struct {
 			// Extracting constants from btAduio.h
@@ -122,7 +121,7 @@ typedef struct BTTrackUpdateMsg {
 			union {
 				uint8_t playback; // esp_avrc_playback_stat_t
 				uint32_t playPosMS;
-			}
+			};
 		} songUpdate;
 		struct {
 			// TODO: Make an enum?

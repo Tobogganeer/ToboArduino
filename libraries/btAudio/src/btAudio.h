@@ -48,7 +48,7 @@ class btAudio
     static void (*trackChangedCallback)();
     static void (*playPositionChangedCallback)(uint32_t playPosMS);
 
-    static String title;
+    static ::String title;
     static String artist;
     static String album;
     static uint32_t totalTrackDurationMS;

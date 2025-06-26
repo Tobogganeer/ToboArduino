@@ -16,7 +16,7 @@ uint32_t btAudio::currentTrackPosMS = 0;
 String btAudio::sourceDeviceName = "";
 
 bool btAudio::avrcConnected = false;
-esp_bd_addr_t btAudio::connectedAddress;
+esp_bd_addr_t btAudio::avrcAddress;
 
 void (*btAudio::connectedCallback)(const esp_bd_addr_t bda, const char *deviceName, int nameLen);
 void (*btAudio::disconnectedCallback)(const esp_bd_addr_t bda, const char *deviceName, int nameLen);
@@ -103,16 +103,15 @@ void btAudio::tryReconnectNextDevice()
         return;
     }
 
-    esp_bd_addr_t addr = deviceList.addresses[reconnectIndex];
     // Copy saved address into our current address
-    memcpy(_address, addr, sizeof(esp_bd_addr_t));
+    memcpy(_address, deviceList.addresses[reconnectIndex], sizeof(esp_bd_addr_t));
 
     ESP_LOGI("btAudio", "Connecting to remembered BT device #%d: %d %d %d %d %d %d", reconnectIndex,
              _address[0], _address[1],
              _address[2], _address[3],
              _address[4], _address[5]);
 
-    esp_a2d_sink_connect(*addr);
+    esp_a2d_sink_connect(_address);
 
     // Start timeout timer
     esp_timer_stop(reconnectTimer);                                     // Stop before (re)starting
@@ -266,17 +265,19 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
     switch (event)
     {
         case ESP_AVRC_CT_CONNECTION_STATE_EVT:
-            // https://docs.espressif.com/projects/esp-idf/en/v4.2/esp32/api-reference/bluetooth/esp_avrc.html#_CPPv442esp_avrc_ct_send_register_notification_cmd7uint8_t7uint8_t8uint32_t
-            avrcConnected = rc->conn_stat.connected;
-            memcpy(avrcAddress, rc->conn_stat.remote_bda, 6);
-
-            if (avrcConnected)
             {
-                // Ask it to tell us when the time, track etc changes every 1000ms
-                uint8_t attr_mask = ESP_AVRC_RN_PLAY_STATUS_CHANGE | ESP_AVRC_RN_TRACK_CHANGE | ESP_AVRC_RN_PLAY_POS_CHANGED;
-                esp_avrc_ct_send_register_notification_cmd(1, attr_mask, 200);
+                // https://docs.espressif.com/projects/esp-idf/en/v4.2/esp32/api-reference/bluetooth/esp_avrc.html#_CPPv442esp_avrc_ct_send_register_notification_cmd7uint8_t7uint8_t8uint32_t
+                avrcConnected = rc->conn_stat.connected;
+                memcpy(avrcAddress, rc->conn_stat.remote_bda, 6);
+
+                if (avrcConnected)
+                {
+                    // Ask it to tell us when the time, track etc changes every 1000ms
+                    uint8_t attr_mask = ESP_AVRC_RN_PLAY_STATUS_CHANGE | ESP_AVRC_RN_TRACK_CHANGE | ESP_AVRC_RN_PLAY_POS_CHANGED;
+                    esp_avrc_ct_send_register_notification_cmd(1, attr_mask, 200);
+                }
+                break;
             }
-            break;
         case ESP_AVRC_CT_METADATA_RSP_EVT:
             {
                 attr_text = (char *)malloc(rc->meta_rsp.attr_length + 1);
@@ -306,40 +307,49 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                 free(attr_text);
                 if (metadataUpdatedCallback)
                     metadataUpdatedCallback();
+
+                break;
             }
-            break;
         case ESP_AVRC_CT_CHANGE_NOTIFY_EVT:
-            uint8_t eventID = rc->change_ntf.event_id;
-            switch (eventID)
             {
-                case ESP_AVRC_RN_PLAY_STATUS_CHANGE:
-                    // TODO: Message about track being paused (or maybe do nothing?)
-                    esp_avrc_playback_stat_t playback = rc->change_ntf.event_parameter.playback;
-                    if (playStatusChangedCallback)
-                        playStatusChangedCallback(playback);
-                    /*
+                uint8_t eventID = rc->change_ntf.event_id;
+                switch (eventID)
+                {
+                    case ESP_AVRC_RN_PLAY_STATUS_CHANGE:
+                        {
+                            // TODO: Message about track being paused (or maybe do nothing?)
+                            esp_avrc_playback_stat_t playback = rc->change_ntf.event_parameter.playback;
+                            if (playStatusChangedCallback)
+                                playStatusChangedCallback(playback);
+                            /*
                     ESP_AVRC_PLAYBACK_STOPPED = 0
                     ESP_AVRC_PLAYBACK_PLAYING = 1
                     ESP_AVRC_PLAYBACK_PAUSED = 2
                     ESP_AVRC_PLAYBACK_FWD_SEEK = 3
                     ESP_AVRC_PLAYBACK_REV_SEEK = 4
                     */
-                    break;
-                case ESP_AVRC_RN_TRACK_CHANGE:
-                    // TODO: Send ESP-NOW message as track has changed + update metadata
-                    // rc->change_ntf.event_parameter.elm_id is a uint8_t[8], just a song ID used to get metadata
-                    if (trackChangedCallback)
-                        trackChangedCallback();
-                    break;
-                case ESP_AVRC_RN_PLAY_POS_CHANGED:
-                    // TODO: Message about play pos
-                    uint32_t playPosMS = rc->change_ntf.event_parameter.play_pos;
-                    currentTrackPosMS = playPosMS;
-                    if (playPositionChangedCallback)
-                        playPositionChangedCallback(playPosMS);
-                    break;
+                            break;
+                        }
+                    case ESP_AVRC_RN_TRACK_CHANGE:
+                        {
+                            // TODO: Send ESP-NOW message as track has changed + update metadata
+                            // rc->change_ntf.event_parameter.elm_id is a uint8_t[8], just a song ID used to get metadata
+                            if (trackChangedCallback)
+                                trackChangedCallback();
+                            break;
+                        }
+                    case ESP_AVRC_RN_PLAY_POS_CHANGED:
+                        {
+                            // TODO: Message about play pos
+                            uint32_t playPosMS = rc->change_ntf.event_parameter.play_pos;
+                            currentTrackPosMS = playPosMS;
+                            if (playPositionChangedCallback)
+                                playPositionChangedCallback(playPosMS);
+                            break;
+                        }
+                }
+                break;
             }
-            break;
         default:
             ESP_LOGE("RCCT", "unhandled AVRC event: %d", event);
             break;
@@ -356,7 +366,7 @@ void btAudio::gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
                 ESP_LOGI("RCCT", "Remote device name: %s", param->read_rmt_name.rmt_name);
 
                 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/bluetooth/esp_gap_bt.html#_CPPv4N21esp_bt_gap_cb_param_t19read_rmt_name_param8rmt_nameE
-                sourceDeviceName = String(param->read_rmt_name.rmt_name);
+                sourceDeviceName = String((char *)(param->read_rmt_name.rmt_name));
                 // Update name of saved device
                 addOrUpdateDevice(&deviceList, _address, sourceDeviceName.c_str(), sourceDeviceName.length());  // Not null here as we checked in the A2D callback
                 if (connectedCallback != nullptr)
@@ -503,7 +513,7 @@ void btAudio::loadDevices(PairedDevices *devices)
         preferences.end();
         preferences.begin(PREF_NAMESPACE, false);  // Open in r/w mode
         PairedDevices empty = { 0 };
-        preferences.putBytes(PREF_KEY, empty, sizeof(PairedDevices));
+        preferences.putBytes(PREF_KEY, &empty, sizeof(PairedDevices));
     }
     preferences.getBytes(PREF_KEY, devices, sizeof(PairedDevices));
     preferences.end();
