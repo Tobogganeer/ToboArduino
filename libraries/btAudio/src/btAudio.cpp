@@ -419,12 +419,35 @@ typedef struct PairedDevices {
 
 */
 
-void btAudio::updateDevices(PairedDevices* devices, esp_bd_addr_t bda, const char* deviceName, int nameLen)
+void btAudio::addOrUpdateDevice(PairedDevices* devices, esp_bd_addr_t bda, const char* deviceName, int nameLen)
 {
     if (!devices)
         return;
 
+    // Check if we are updating or adding
+    uint8_t deviceIndex = getDeviceIndex(devices, bda);
 
+    // Index is 255 if device doesn't exist
+    if (deviceIndex == 255)
+    {
+        // Try to put at end of list if it isn't full
+        if (devices->count => MAX_PAIRED_DEVICES)
+        {
+            log_w("Tried to update/add device, but it wasn't in devices list and we are at the max paired devices");
+            return;
+        }
+
+        // We are adding a new device to end of list, so increment count
+        deviceIndex = devices->count;
+        devices->count++;
+    }
+
+    // Copy address and name into the proper slot
+    memcpy(devices->addresses[deviceIndex], bda, sizeof(esp_bd_addr_t));
+    int len = nameLen > MAX_DEVICE_NAME_LENGTH ? MAX_DEVICE_NAME_LENGTH : nameLen;
+    memcpy(devices->deviceNames[deviceIndex], deviceName, len);
+
+    saveDevices(devices);
 }
 
 uint8_t btAudio::getDeviceIndex(const PairedDevices* devices, esp_bd_addr_t bda)
@@ -531,7 +554,10 @@ void btAudio::favouriteDevice(PairedDevices* devices, esp_bd_addr_t bda)
         return;
     }
 
-    // TODO: Change actual order of list?
-    devices->favourite = deviceIndex;
+    // Not the most efficient, but keep swapping up until we reach the top (lowest index)
+    while (deviceIndex > 0)
+        swapDevices(devices, deviceIndex, deviceIndex--);
+
+    devices->favourite = 0;
     saveDevices(devices);
 }

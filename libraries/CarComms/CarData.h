@@ -7,7 +7,7 @@ typedef enum : uint8_t {
 	ID_CARINFO 			= 1 << 0,
 	ID_GEAR 			= 1 << 1,
 	ID_BT_INFO 			= 1 << 2,
-	ID_BT_SKIP 			= 1 << 3,
+	ID_BT_TRACK_UPDATE 	= 1 << 3,
 	ID_OEM_DISPLAY 		= 1 << 4,
 	ID_REVERSEPROXIMITY = 1 << 5,
 	ID_BUZZER			= 1 << 6,
@@ -23,6 +23,24 @@ typedef enum : uint8_t {
 	Fifth,
 	Reverse,
 } Gear;
+
+typedef enum : uint8_t {
+	BT_INFO_SONG,
+	BT_INFO_DEVICE
+} BTInfoType;
+
+typedef enum : uint8_t {
+	BT_UPDATE_SONG_POS,
+	BT_UPDATE_SKIP
+} BTTrackUpdateType;
+
+typedef enum : uint8_t {
+	BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE,
+	BT_SONG_POS_UPDATE_TRACK_CHANGE,
+	BT_SONG_POS_UPDATE_PLAY_POS_CHANGED
+} BTTrackSongPosUpdateType;
+
+#define BT_SONG_INFO_MAX_STR_LEN 64
 
 typedef struct CarInfoMsg {
 	// === CAR INFO ===
@@ -67,17 +85,48 @@ typedef struct GearMsg {
 } GearMsg;
 
 typedef struct BTInfoMsg {
-	char title[64];
-	char artist[64];
-	char album[64];
-	int length;
-	int currentPlayTime;
+	BTInfoType type; // 1 byte
+
+	union {
+		struct {
+			char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
+			char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
+			char album[BT_SONG_INFO_MAX_STR_LEN]; // 192
+			int length; // 196
+			int currentPlayTime; // 200
+		} songInfo;
+		struct {
+			// Extracting constants from btAduio.h
+			// Change these if those change (this is lazy but I don't really care)
+			uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
+			char deviceNames[5][32]; // 5 x 32 = 160
+			uint8_t count; // 161
+			uint8_t favourite; // 162
+		} deviceInfo;
+	};
+	
 } BTInfoMsg;
 
-typedef struct BTSkipMsg {
-	bool forward;
-	bool reverse;
-} BTSkipMsg;
+typedef struct BTTrackUpdateMsg {
+	BTTrackUpdateType type;
+
+	union
+	{
+		struct {
+			BTTrackSongPosUpdateType updateType;
+			union {
+				uint8_t playback; // esp_avrc_playback_stat_t
+				uint32_t playPosMS;
+			}
+		} songUpdate;
+		struct {
+			// TODO: Make an enum?
+			bool forward;
+			bool reverse;
+		} skipUpdate;
+	};
+	
+} BTTrackUpdateMsg;
 
 typedef struct OEMDisplayMsg {
 	char message[14];

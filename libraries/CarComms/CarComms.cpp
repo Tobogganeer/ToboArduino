@@ -21,7 +21,7 @@ void StoreLastReceiveTime(CarDataType type)
         case CarDataType::ID_BT_INFO:
             lastReceiveTimes[2] = millis();
             break;
-        case CarDataType::ID_BT_SKIP:
+        case CarDataType::ID_BT_TRACK_UPDATE:
             lastReceiveTimes[3] = millis();
             break;
         case CarDataType::ID_OEM_DISPLAY:
@@ -133,7 +133,7 @@ uint32_t CarComms::getLastReceiveTimeMS(CarDataType type)
             return lastReceiveTimes[1];
         case CarDataType::ID_BT_INFO:
             return lastReceiveTimes[2];
-        case CarDataType::ID_BT_SKIP:
+        case CarDataType::ID_BT_TRACK_UPDATE:
             return lastReceiveTimes[3];
         case CarDataType::ID_OEM_DISPLAY:
             return lastReceiveTimes[4];

@@ -50,7 +50,7 @@ class btAudio
 
     static void saveDevices(const PairedDevices* devices);
     static void loadDevices(PairedDevices* devices);
-    static void updateDevices(PairedDevices* devices, esp_bd_addr_t bda, const char* deviceName, int nameLen);
+    static void addOrUpdateDevice(PairedDevices* devices, esp_bd_addr_t bda, const char* deviceName, int nameLen);
     static uint8_t getDeviceIndex(const PairedDevices* devices, esp_bd_addr_t bda);
     static void moveDeviceUp(PairedDevices* devices, esp_bd_addr_t bda);
     static void moveDeviceDown(PairedDevices* devices, esp_bd_addr_t bda);
