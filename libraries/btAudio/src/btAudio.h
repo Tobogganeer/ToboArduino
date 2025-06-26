@@ -70,8 +70,6 @@ class btAudio
     static void avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param);
     static void gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param);
 
-    static void btConnected(uint8_t *bda);
-
     static void swapDevices(PairedDevices* devices, uint8_t a, uint8_t b);
 
     // bluetooth address of connected device

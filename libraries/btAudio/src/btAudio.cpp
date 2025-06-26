@@ -142,11 +142,6 @@ void btAudio::disconnect()
     esp_a2d_sink_disconnect(_address);
 }
 
-void btAudio::btConnected(esp_bd_addr_t bda)
-{
-    esp_bt_gap_read_remote_name(bda);
-}
-
 void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
 {
     esp_a2d_cb_param_t *a2d = (esp_a2d_cb_param_t *)(param);
@@ -154,18 +149,24 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
     {
         case ESP_A2D_CONNECTION_STATE_EVT:
             {
-                esp_bd_addr_t temp = a2d->conn_stat.remote_bda;
-                // TODO: Handle ESP_A2D_CONNECTION_STATE_DISCONNECTED, ESP_A2D_CONNECTION_STATE_DISCONNECTING
+                // Store address
+                memcpy(_address, a2d->conn_stat.remote_bda, sizeof(esp_bd_addr_t));
+
                 if (a2d->conn_stat.state == ESP_A2D_CONNECTION_STATE_CONNECTED)
                 {
                     // Stop reconnect timeout timer
                     esp_timer_stop(reconnectTimer);
                     reconnecting = false;
 
-                    memcpy(_address, temp, sizeof(esp_bd_addr_t));
                     ESP_LOGI("btAudio", "Connected to BT device: %d %d %d %d %d %d", _address[0], _address[1], _address[2], _address[3], _address[4], _address[5]);
 
-                    btConnected(conn_stat.remote_bda);
+                    // Store as recently connected device
+                    if (deviceList.count == 0)
+                        loadDevices(&deviceList);
+                    addOrUpdateDevice(&deviceList, _address, "Unknown", 8);
+
+                    // Get device name
+                    esp_bt_gap_read_remote_name(_address);
                 }
                 else if (a2d->conn_stat.state == ESP_A2D_CONNECTION_STATE_DISCONNECTED)
                 {
@@ -322,6 +323,8 @@ void btAudio::gap_cb(esp_bt_gap_cb_event_t event, esp_bt_gap_cb_param_t *param)
 
                 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/bluetooth/esp_gap_bt.html#_CPPv4N21esp_bt_gap_cb_param_t19read_rmt_name_param8rmt_nameE
                 sourceDeviceName = String(param->read_rmt_name.rmt_name);
+                // Update name of saved device
+                addOrUpdateDevice(&deviceList, _address, sourceDeviceName.c_str(), sourceDeviceName.length()); // Not null here as we checked in the A2D callback
                 // TODO: Send message?
             }
             else
