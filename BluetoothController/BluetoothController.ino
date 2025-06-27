@@ -8,6 +8,7 @@ This board will communicate via ESP-NOW and drive the display/settings
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <CarComms.h>
+#include "esp_timer.h"
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 CarComms comms(handleCarData);
@@ -24,24 +25,25 @@ CarComms comms(handleCarData);
 
 //#define DEBUG
 
-/*
-Splash screen
 
-===================
-...Goofy ah car....
-.......V1.0........
-...Evan Daveikis...
-  System booting...
-===================
+typedef enum : uint8_t
+{
+    STATE_SPLASHSCREEN,
+    STATE_IDLE,
+    STATE_SETTINGS_MAIN,
+    STATE_CONNECTED
+} State;
 
-*/
+
+State state;
+
 
 void setup()
 {
     lcd.init();
     lcd.backlight();
-    
-    initIcons(); // Icons.h
+
+    initIcons();  // Icons.h
 
 #ifdef DEBUG
     Serial.begin(115200);
@@ -73,26 +75,26 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
     if (type == ID_BT_TRACK_UPDATE)
     {
         BTTrackUpdateMsg* msg = (BTTrackUpdateMsg*)data;
-        
+
         switch (msg->type)
         {
             case BT_UPDATE_SONG_POS:
-            {
-                switch (msg->songUpdate.updateType)
                 {
-                    case BT_SONG_POS_UPDATE_TRACK_CHANGE:
-                        break;
-                    case BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE:
-                        // msg->songUpdate.
-                        // uint8_t playback; // esp_avrc_playback_stat_t
-                        break;
-                    case BT_SONG_POS_UPDATE_PLAY_POS_CHANGED:
-                        // msg->songUpdate.
-                        // uint32_t playPosMS;
-                        break;
+                    switch (msg->songUpdate.updateType)
+                    {
+                        case BT_SONG_POS_UPDATE_TRACK_CHANGE:
+                            break;
+                        case BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE:
+                            // msg->songUpdate.
+                            // uint8_t playback; // esp_avrc_playback_stat_t
+                            break;
+                        case BT_SONG_POS_UPDATE_PLAY_POS_CHANGED:
+                            // msg->songUpdate.
+                            // uint32_t playPosMS;
+                            break;
+                    }
+                    break;
                 }
-                break;
-            }
         }
     }
     else if (type == ID_BT_INFO)
@@ -102,39 +104,39 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
         switch (msg->type)
         {
             case BT_INFO_METADATA:
-            {
-                displayMetadata(msg);
-                // msg->songInfo.
-                // char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
-                // char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
-                // char album[BT_SONG_INFO_MAX_STR_LEN]; // 192
-                // uint32_t trackLengthMS; // 196
-                break;
-            }
+                {
+                    displayMetadata(msg);
+                    // msg->songInfo.
+                    // char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
+                    // char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
+                    // char album[BT_SONG_INFO_MAX_STR_LEN]; // 192
+                    // uint32_t trackLengthMS; // 196
+                    break;
+                }
             case BT_INFO_DEVICES:
-            {
-                // msg->devices.
-                // uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
-                // char deviceNames[5][32]; // 5 x 32 = 160
-                // uint8_t count; // 161
-                // uint8_t favourite; // 162
-                // uint8_t connected; // 163
-                break;
-            }
+                {
+                    // msg->devices.
+                    // uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
+                    // char deviceNames[5][32]; // 5 x 32 = 160
+                    // uint8_t count; // 161
+                    // uint8_t favourite; // 162
+                    // uint8_t connected; // 163
+                    break;
+                }
             case BT_INFO_CONNECTED:
-            {
-                // msg->sourceDevice.
-                // uint8_t address[6];
-			    // char deviceName[32];
-                break;
-            }
+                {
+                    // msg->sourceDevice.
+                    // uint8_t address[6];
+                    // char deviceName[32];
+                    break;
+                }
             case BT_INFO_DISCONNECTED:
-            {
-                // msg->sourceDevice.
-                // uint8_t address[6];
-			    // char deviceName[32];
-                break;
-            }
+                {
+                    // msg->sourceDevice.
+                    // uint8_t address[6];
+                    // char deviceName[32];
+                    break;
+                }
         }
     }
 }
@@ -159,7 +161,7 @@ Current progress
 
 void displayMetadata(BTInfoMsg* msg)
 {
-    char line[19] = {0};
+    char line[19] = { 0 };
 
     lcd.setCursor(0, 0);
     lcd.write(ICON_SONG);
@@ -178,7 +180,7 @@ void displayMetadata(BTInfoMsg* msg)
     lcd.setCursor(2, 2);
     memcpy(line, msg->songInfo.album, 18);
     lcd.print(line);
-    
+
     lcd.setCursor(0, 3);
     lcd.print(msg->songInfo.trackLengthMS / 1000);
 }
