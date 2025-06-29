@@ -151,6 +151,17 @@ void btAudio::reconnect()
     //esp_a2d_sink_connect(_address);
 }
 
+void btAudio::connect(esp_bd_addr_t bda)
+{
+    // Stop trying our device list if we manually try to connect
+    esp_timer_stop(reconnectTimer);
+    reconnecting = false;
+
+    memcpy(_address, bda, sizeof(esp_bd_addr_t));
+
+    esp_a2d_sink_connect(_address);
+}
+
 void btAudio::disconnect()
 {
     esp_a2d_sink_disconnect(_address);
@@ -188,7 +199,7 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                     moveDeviceUp(&deviceList, _address); // Move recent connections up
 
                     // Store and send connected device in case controls initialize a bit later
-                    deviceList.connected = getDeviceIndex(&deviceList, _address);
+                    memcpy(deviceList.connected, _address, sizeof(esp_bd_addr_t));
                     saveDevices(&deviceList);
 
                     // Get device name
@@ -201,14 +212,15 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                         if (deviceList.count == 0)
                             loadDevices(&deviceList);
 
-                        uint8_t index = getDeviceIndex(&deviceList, _address);
-                        if (deviceList.connected == index)
+                        bool currentDeviceDisconnected = memcmp(_address, deviceList.connected, sizeof(esp_bd_addr_t)) == 0;
+                        if (currentDeviceDisconnected)
                         {
-                            deviceList.connected = 255;
+                            memset(deviceList.connected, 0, sizeof(esp_bd_addr_t));
                             saveDevices(&deviceList);
+                            uint8_t index = getDeviceIndex(&deviceList, _address);
+                            if (index != 255);
+                                disconnectedCallback(_address, deviceList.deviceNames[index], MAX_DEVICE_NAME_LENGTH);
                         }
-                        if (index != 255)
-                            disconnectedCallback(_address, deviceList.deviceNames[index], MAX_DEVICE_NAME_LENGTH);
                     }
 
                     if (reconnecting)

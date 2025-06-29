@@ -38,7 +38,9 @@ typedef enum : uint8_t {
 	BT_UPDATE_DEVICE_DELETE,
 	BT_UPDATE_DEVICE_MOVE_UP,
 	BT_UPDATE_DEVICE_MOVE_DOWN,
-	BT_UPDATE_SET_DISCOVERABLE
+	BT_UPDATE_SET_DISCOVERABLE,
+	BT_UPDATE_DEVICE_CONNECT, // These are in TrackUpdate so the main BTAudio can listen for the packets
+	BT_UPDATE_DEVICE_DISCONNECT,
 } BTTrackUpdateType;
 
 typedef enum : uint8_t {
@@ -109,10 +111,10 @@ typedef struct BTInfoMsg {
 			char deviceNames[5][32]; // 5 x 32 = 160
 			uint8_t count; // 161
 			uint8_t favourite; // 162
-			uint8_t connected; // 163
+			uint8_t connected[6]; // 163
 		} devices;
 		struct {
-			uint8_t address[6];
+			uint8_t address[6]; // Used for connected/disconnected
 			char deviceName[32];
 		} sourceDevice;
 	};
@@ -125,7 +127,7 @@ typedef struct BTTrackUpdateMsg {
 
 	union
 	{
-		uint8_t device[6]; // For favouriting, deleting, etc
+		uint8_t device[6]; // For favouriting, deleting, connecting, etc
 		bool discoverable;
 		struct {
 			BTTrackSongPosUpdateType updateType;

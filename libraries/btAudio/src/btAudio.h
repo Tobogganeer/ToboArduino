@@ -18,7 +18,7 @@ typedef struct PairedDevices {
     char deviceNames[MAX_PAIRED_DEVICES][MAX_DEVICE_NAME_LENGTH]; // 5 x 32 = 160
     uint8_t count;
     uint8_t favourite;
-    uint8_t connected;
+    esp_bd_addr_t connected;
 } PairedDevices;
 
 class btAudio
@@ -30,6 +30,7 @@ class btAudio
     // Bluetooth functionality
     void begin();
     void end();
+    void connect(esp_bd_addr_t bda);
     void disconnect();
     void reconnect();
     void setSinkCallback(void (*sinkCallback)(const uint8_t *data, uint32_t len));

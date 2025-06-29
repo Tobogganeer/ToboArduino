@@ -208,6 +208,13 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
         case BT_UPDATE_SET_DISCOVERABLE:
             audio.setDiscoverable(msg->discoverable);
             break;
+        case BT_UPDATE_DEVICE_CONNECT:
+            audio.connect(msg->device);
+            break;
+        case BT_UPDATE_DEVICE_DISCONNECT:
+            // TODO: Should we compare msg->device to the current connected one?
+            audio.disconnect();
+            break;
     }
 }
 

@@ -29,14 +29,22 @@ CarComms comms(handleCarData);
 typedef enum : uint8_t
 {
     STATE_SPLASHSCREEN,
+    STATE_RECONNECTING,
     STATE_IDLE,
+    STATE_SLEEP,
+    STATE_DISPLAY,
     STATE_SETTINGS_MAIN,
+    STATE_SETTINGS_DEVICE,
+    STATE_CONNECTING,
+    STATE_INFO_MESSAGE,
     STATE_CONNECTED
 } State;
 
 
 State state;
-
+State nextState;
+esp_timer_handle_t stateSwitchTimer;
+bool switchingState;
 
 void setup()
 {
@@ -54,6 +62,36 @@ void setup()
 
     comms.begin();
     comms.receiveTypeMask = CarDataType::ID_BT_TRACK_UPDATE | CarDataType::ID_BT_INFO;
+
+    esp_timer_create_args_t timerArgs = {
+        .callback = &stateTimerCB,
+        .name = "stateSwitchTimer"
+    };
+    esp_timer_create(&timerArgs, &stateSwitchTimer);
+}
+
+void stateTimerCB(void* arg)
+{
+    switchingState = false;
+}
+
+void switchStateInstant(State endState)
+{
+    esp_timer_stop(stateSwitchTimer);
+    switchingState = false;
+    state = endState;
+}
+
+void switchState(State endState, State intermediateState, uint32_t timeInIntermediateStateMS)
+{
+    switchingState = true;
+
+    esp_timer_stop(stateSwitchTimer);                                     // Stop before (re)starting
+    esp_timer_start_once(stateSwitchTimer, timeInIntermediateStateMS * 1000);  // Convert to us from ms
+    nextState = endState;
+    state = intermediateState;
+
+    switchingState = false;
 }
 
 void splashScreen()
@@ -161,6 +199,7 @@ Current progress
 
 void displayMetadata(BTInfoMsg* msg)
 {
+    lcd.clear();
     char line[19] = { 0 };
 
     lcd.setCursor(0, 0);
