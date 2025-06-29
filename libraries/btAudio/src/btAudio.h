@@ -74,6 +74,7 @@ class btAudio
     static void moveDeviceDown(PairedDevices* devices, esp_bd_addr_t bda);
     static void deleteDevice(PairedDevices* devices, esp_bd_addr_t bda);
     static void favouriteDevice(PairedDevices* devices, esp_bd_addr_t bda);
+    static bool isReconnecting() { return reconnecting; }
 
   private:
     const char* _devName;
@@ -93,6 +94,7 @@ class btAudio
     // bluetooth address of connected device
     static uint8_t _address[6];
     static float _vol;
+    static bool reconnecting;
 };
 
 

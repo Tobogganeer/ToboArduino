@@ -86,8 +86,10 @@ void devicesSavedCallback(const PairedDevices* devices)
     BTInfoMsg msg;
     msg.type = BTInfoType::BT_INFO_DEVICES;
     memcpy(&msg.devices, devices, sizeof(PairedDevices));
+    msg.devices.reconnecting = audio.isReconnecting();
     bool success = comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
-    log_i("Sent devices list. Success? %s", success ? "true" : "false");
+    if (!success)
+        log_i("Failed to send devices list");
 }
 
 void connectedCallback(const esp_bd_addr_t bda, const char* deviceName, int nameLen)

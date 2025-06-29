@@ -35,7 +35,7 @@ Preferences preferences;
 
 PairedDevices deviceList = { 0 };
 int reconnectIndex = 0;
-bool reconnecting = false;
+bool btAudio::reconnecting = false;
 esp_timer_handle_t reconnectTimer;
 
 ////////////////////////////////////////////////////////////////////
