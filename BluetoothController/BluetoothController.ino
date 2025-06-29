@@ -42,11 +42,17 @@ typedef enum : uint8_t
     STATE_ERROR_NO_MESSAGES
 } State;
 
+#define NO_RECV_ERROR_THRESHOLD_MS = 5000; // If we get no data after this time, the audio module isn't communicating
+
 
 State state;
 State nextState;
 esp_timer_handle_t stateSwitchTimer;
 bool switchingState;
+
+BTInfoMsg devices;
+BTInfoMsg songInfo;
+
 
 void setup()
 {
@@ -60,6 +66,7 @@ void setup()
     esp_log_level_set("*", ESP_LOG_INFO);
 #endif
 
+    switchStateInstant(STATE_SPLASHSCREEN);
     splashScreen();
 
     comms.begin();
@@ -72,28 +79,54 @@ void setup()
     esp_timer_create(&timerArgs, &stateSwitchTimer);
 }
 
+
+void loop()
+{
+    // Make sure we are receiving messages
+    checkError();
+
+
+}
+
+void checkError()
+{
+    bool hasReceivedAnyMessage = comms.getTimeSinceLastReceiveMS() != -1;
+    long currentTimeMS = millis();
+
+    if (!hasReceivedAnyMessage && currentTimeMS > NO_RECV_ERROR_THRESHOLD_MS)
+    {
+        if (state != STATE_ERROR_NO_MESSAGES)
+        {
+            // Switch no matter what - no point going to settings if we can't set anything
+            switchStateInstant(STATE_ERROR_NO_MESSAGES);
+        }
+    }
+}
+
+
+
 void stateTimerCB(void* arg)
 {
-    switchingState = false;
+    switchStateInstant(nextState);
 }
 
 void switchStateInstant(State endState)
 {
+    log_i("Switch to state %d from state %d", endState, state);
+
     esp_timer_stop(stateSwitchTimer);
-    switchingState = false;
+    switchingState = false; // TODO: Maybe move this to stateTimerCB and return from the fn if switchingState?
     state = endState;
 }
 
-void switchState(State endState, State intermediateState, uint32_t timeInIntermediateStateMS)
+void switchStateWithIntermediate(State endState, State intermediateState, uint32_t timeInIntermediateStateMS)
 {
     switchingState = true;
 
-    esp_timer_stop(stateSwitchTimer);                                     // Stop before (re)starting
+    esp_timer_stop(stateSwitchTimer);                                          // Stop before (re)starting
     esp_timer_start_once(stateSwitchTimer, timeInIntermediateStateMS * 1000);  // Convert to us from ms
     nextState = endState;
     state = intermediateState;
-
-    switchingState = false;
 }
 
 void splashScreen()
@@ -145,7 +178,9 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
         {
             case BT_INFO_METADATA:
                 {
-                    displayMetadata(msg);
+                    // Store song info
+                    memcpy(&songInfo, msg, sizeof(BTInfoMsg));
+                    displayMetadata();
                     // msg->songInfo.
                     // char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
                     // char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
@@ -155,12 +190,29 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                 }
             case BT_INFO_DEVICES:
                 {
+                    // Store devices
+                    memcpy(&devices, msg, sizeof(BTInfoMsg));
+                    if (state == STATE_SPLASHSCREEN)
+                    {
+                        if (devices.devices.count == 0)
+                            switchStateInstant(STATE_IDLE);
+                        else if (devices.devices.reconnecting)
+                            switchStateInstant(STATE_RECONNECTING);
+                    }
+                    else if (state == STATE_RECONNECTING)
+                    {
+                        // If we've stopped reconnecting, we weren't successful
+                        if (devices.devices.reconnecting == false)
+                            switchStateInstant(STATE_IDLE);
+                    }
+
                     // msg->devices.
                     // uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
                     // char deviceNames[5][32]; // 5 x 32 = 160
                     // uint8_t count; // 161
                     // uint8_t favourite; // 162
-                    // uint8_t connected; // 163
+                    // uint8_t connected[6]; // 168, address of connected
+                    // bool reconnecting;
                     break;
                 }
             case BT_INFO_CONNECTED:
@@ -199,7 +251,7 @@ Current progress
 
 */
 
-void displayMetadata(BTInfoMsg* msg)
+void displayMetadata()
 {
     lcd.clear();
     char line[19] = { 0 };
@@ -207,25 +259,21 @@ void displayMetadata(BTInfoMsg* msg)
     lcd.setCursor(0, 0);
     lcd.write(ICON_SONG);
     lcd.setCursor(2, 0);
-    memcpy(line, msg->songInfo.title, 18);
+    memcpy(line, songInfo.songInfo.title, 18);
     lcd.print(line);
 
     lcd.setCursor(0, 1);
     lcd.write(ICON_ARTIST);
     lcd.setCursor(2, 1);
-    memcpy(line, msg->songInfo.artist, 18);
+    memcpy(line, songInfo.songInfo.artist, 18);
     lcd.print(line);
 
     lcd.setCursor(0, 2);
     lcd.write(ICON_ALBUM);
     lcd.setCursor(2, 2);
-    memcpy(line, msg->songInfo.album, 18);
+    memcpy(line, songInfo.songInfo.album, 18);
     lcd.print(line);
 
     lcd.setCursor(0, 3);
-    lcd.print(msg->songInfo.trackLengthMS / 1000);
-}
-
-void loop()
-{
+    lcd.print(songInfo.songInfo.trackLengthMS / 1000);
 }
