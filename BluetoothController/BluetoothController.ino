@@ -57,6 +57,18 @@ typedef enum : uint8_t
 
 #define CLICKS_PER_ROTATION 4  // The encoder outputs 4 times when rotated once
 
+#define SETTINGS_MAIN_DEVICE_LIST 0
+#define SETTINGS_MAIN_PAIR_DEVICE 1
+#define SETTINGS_MAIN_DISCONNECT 2
+#define SETTINGS_MAIN_GO_BACK 3
+
+#define SETTINGS_DEVICE_CONNECT 0
+#define SETTINGS_DEVICE_FAVOURITE 1
+#define SETTINGS_DEVICE_DELETE 2
+#define SETTINGS_DEVICE_MOVE_UP 3
+#define SETTINGS_DEVICE_MOVE_DOWN 4
+#define SETTINGS_DEVICE_GO_BACK 5
+
 
 State state;
 State nextState;
@@ -72,6 +84,9 @@ uint32_t playPosMS;
 
 Rotary dial;
 Button2 dialButton;
+
+int selectedOption;
+int numOptions;
 
 void setup()
 {
@@ -190,6 +205,9 @@ void afterStateSwitched(State from, State to)
         case STATE_SLEEP:
             lcd.backLight();  // Turn display back on
             break;
+        case STATE_DISCOVERABLE:
+            setDiscoverable(false); // Back into hiding
+            break;
     }
 
     // TO STATE
@@ -201,7 +219,21 @@ void afterStateSwitched(State from, State to)
             break;
         case STATE_IDLE:
             lcd.clear();
-            displayMessage("No device connected", "Press to pair device", false);
+            displayMessage("No device connected", "Press to enter menu", false);
+            break;
+        case STATE_DISCOVERABLE:
+            setDiscoverable(true); // Make visible to pairing
+            displayMessage("Bluetooth visible", "as 'Quandale's Whip'", false)
+
+            // TODO: Disconnect when trying to pair, but if we leave and aren't connected, try reconnecting
+            // TODO: Add packet/ability to start a reconnect from this end
+            break;
+        case STATE_SETTINGS_MAIN:
+            numOptions = 4;
+            break;
+        case STATE_SETTINGS_DEVICE_LIST:
+        case STATE_SETTINGS_DEVICE:
+            numOptions = 6;
             break;
     }
 }
@@ -308,7 +340,6 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                     memcpy(&connectedDisconnected, msg, sizeof(BTInfoMsg));
                     switchStateWithIntermediate(STATE_DISPLAY, STATE_TRANSITION_MESSAGE, MESSAGE_CONNECT_TIME);
                     displayMessage("Connected to", connectedDisconnected.sourceDevice.deviceName, true);
-                    // TODO: Move this to afterStateSwitched for consistency?
 
                     // msg->sourceDevice.
                     // uint8_t address[6];
@@ -323,7 +354,6 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                     {
                         switchStateWithIntermediate(STATE_IDLE, STATE_TRANSITION_MESSAGE, MESSAGE_DISCONNECT_TIME);
                         displayMessage("Disconnected from", connectedDisconnected.sourceDevice.deviceName, true);
-                        // TODO: Show 'disconnected from X' message here
                     }
                     // msg->sourceDevice.
                     // uint8_t address[6];
@@ -445,18 +475,151 @@ void printCentered(const char* text)
     lcd.print(line);
 }
 
+/*
+    STATE_SPLASHSCREEN,
+    STATE_RECONNECTING,
+    STATE_IDLE,
+    STATE_SLEEP,
+    STATE_DISPLAY,
+    STATE_SETTINGS_MAIN,
+    STATE_SETTINGS_DEVICE,
+    STATE_SETTINGS_DEVICE_LIST,
+    STATE_CONNECTING,
+    STATE_DISCOVERABLE,
+    STATE_TRANSITION_MESSAGE,
+    STATE_ERROR_NO_MESSAGES
+
+    SETTINGS_MAIN_DEVICE_LIST 0
+    SETTINGS_MAIN_PAIR_DEVICE 1
+    SETTINGS_MAIN_GO_BACK 2
+    SETTINGS_MAIN_DISCONNECT 3
+
+    SETTINGS_DEVICE_CONNECT 0
+    SETTINGS_DEVICE_MOVE_UP 1
+    SETTINGS_DEVICE_MOVE_DOWN 2
+    SETTINGS_DEVICE_FAVOURITE 3
+    SETTINGS_DEVICE_DELETE 4
+    SETTINGS_DEVICE_GO_BACK 5
+*/
 
 void rotateLeft(Rotary& dial)
 {
-    // Left
+    if (state == STATE_SLEEP)
+        switchStateInstant(STATE_IDLE);
+    else if (state == STATE_SETTINGS_MAIN || state == STATE_SETTINGS_DEVICE || state == STATE_SETTINGS_DEVICE_LIST)
+    {
+        // Decrement option, wrapping around
+        // Note: numOptions is set when the state is changed
+        selectedOption--;
+        if (selectedOption < 0)
+            selectedOption = numOptions - 1;
+            
+        selectedOptionChanged();
+    }
 }
 
 void rotateRight(Rotary& dial)
 {
-    // Right
+    if (state == STATE_SLEEP)
+        switchStateInstant(STATE_IDLE);
+    else if (state == STATE_SETTINGS_MAIN || state == STATE_SETTINGS_DEVICE || state == STATE_SETTINGS_DEVICE_LIST)
+    {
+        // Increment option, wrapping around
+        // Note: numOptions is set when the state is changed
+        selectedOption++;
+        if (selectedOption >= numOptions)
+            selectedOption = 0;
+
+        selectedOptionChanged();
+    }
+}
+
+void selectedOptionChanged()
+{
+    // TODO: Refresh current screen
 }
 
 void click(Button2& btn)
 {
-    // Click
+    switch (state)
+    {
+        case STATE_SETTINGS_DEVICE_LIST:
+            deviceList_click();
+            break;
+        case STATE_SETTINGS_DEVICE:
+            device_click();
+            break;
+        case STATE_SETTINGS_MAIN:
+            mainSettings_click();
+            break;
+        case STATE_SPLASHSCREEN:
+        case STATE_ERROR_NO_MESSAGES:
+        case STATE_CONNECTING: // TODO: Timeout timer in BTAudio when we try to connect
+            // States where you shouldn't be able to click
+            break;
+        case STATE_TRANSITION_MESSAGE:
+            // Skip message
+            stateTimerCB(nullptr);
+            break;
+        case STATE_SLEEP:
+            // Wake up
+            switchStateInstant(STATE_IDLE);
+            break;
+        case STATE_DISCOVERABLE:
+            // afterStateSwitched() handles setting discoverable
+            switchStateInstant(STATE_SETTINGS_MAIN);
+            break;
+    }
+}
+
+/*
+
+=== Main
+Device List
+Pair Device (4/5)
+Disconnect
+Go back
+
+=== Device
+Connect/Disconnect
+Favourite
+Delete
+VVV
+
+^^^
+Move up
+Move down
+Go back
+
+=== Device List
+Device 1
+Device 2
+Device 3
+VVV
+
+^^^
+Device 4
+<empty slot>
+Go back
+
+*/
+
+void deviceList_click()
+{
+}
+
+void device_click()
+{
+}
+
+void mainSettings_click()
+{
+}
+
+void setDiscoverable(bool discoverable)
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SET_DISCOVERABLE;
+    msg.discoverable = discoverable;
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 }
