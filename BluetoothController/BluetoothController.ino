@@ -58,6 +58,8 @@ long lastStateSwitchTimeMS;
 BTInfoMsg devices;
 BTInfoMsg songInfo;
 BTInfoMsg connectedDisconnected;
+uint8_t playbackStatus; // esp_avrc_playback_stat_t
+uint32_t playPosMS;
 
 
 void setup()
@@ -99,6 +101,7 @@ void loop()
                 switchStateWithIntermediate(STATE_SLEEP, STATE_TRANSITION_MESSAGE, MESSAGE_SLEEP_TIME);
                 displayMessage("Sleeping in", "3 seconds...", false);
             }
+            break;
     }
 }
 
@@ -154,13 +157,14 @@ void afterStateSwitched(State from, State to)
 {
     log_i("Switch to state %d from state %d", endState, state);
 
-    // TODO: Stuff like turn display back on from sleep
+    // Stuff like turn display back on from sleep
 
     // FROM STATE
     switch (from)
     {
         case STATE_SLEEP:
             lcd.backLight(); // Turn display back on
+            break;
     }
 
     // TO STATE
@@ -169,9 +173,11 @@ void afterStateSwitched(State from, State to)
         case STATE_SLEEP:
             lcd.clear();
             lcd.noBackLight(); // Turn display off
+            break;
         case STATE_IDLE:
             lcd.clear();
             displayMessage("No device connected", "Press to pair device", false);
+            break;
     }
 }
 
@@ -213,10 +219,14 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                         case BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE:
                             // msg->songUpdate.
                             // uint8_t playback; // esp_avrc_playback_stat_t
+                            playbackStatus = msg->songUpdate.playback;
+                            displayMusic();
                             break;
                         case BT_SONG_POS_UPDATE_PLAY_POS_CHANGED:
                             // msg->songUpdate.
                             // uint32_t playPosMS;
+                            playPosMS = msg->songUpdate.playPosMS;
+                            displayMusic();
                             break;
                     }
                     break;
@@ -233,7 +243,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                 {
                     // Store song info
                     memcpy(&songInfo, msg, sizeof(BTInfoMsg));
-                    displayMetadata();
+                    displayMusic();
                     // msg->songInfo.
                     // char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
                     // char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
@@ -317,31 +327,43 @@ Current progress
 
 */
 
-void displayMetadata()
+void displayMusic()
 {
     lcd.clear();
     char line[19] = { 0 };
 
+    // Title
     lcd.setCursor(0, 0);
     lcd.write(ICON_SONG);
     lcd.setCursor(2, 0);
     memcpy(line, songInfo.songInfo.title, 18);
     lcd.print(line);
 
+    // Artist
     lcd.setCursor(0, 1);
     lcd.write(ICON_ARTIST);
     lcd.setCursor(2, 1);
     memcpy(line, songInfo.songInfo.artist, 18);
     lcd.print(line);
 
+    // Album
     lcd.setCursor(0, 2);
     lcd.write(ICON_ALBUM);
     lcd.setCursor(2, 2);
     memcpy(line, songInfo.songInfo.album, 18);
     lcd.print(line);
 
+    // Song time
     lcd.setCursor(0, 3);
-    lcd.print(songInfo.songInfo.trackLengthMS / 1000);
+
+    int currentMins = (playPosMS / 1000) / 60;
+    int currentSecs = (playPosMS / 1000) % 60;
+    int totalMins = (songInfo.songInfo.trackLengthMS / 1000) / 60;
+    int totalSecs = (songInfo.songInfo.trackLengthMS / 1000) % 60;
+    // e.g. 4:52 / 5:06
+    sprintf(line, "%d:%.2d / %d:%.2d", currentMins, currentSecs, totalMins, totalSecs);
+    lcd.print(line);
+    // TODO: Take status into account (paused at least)
 }
 
 void displayMessage(const char* firstLine, const char* secondLine, bool overflowSecondLine)
