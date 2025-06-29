@@ -42,7 +42,7 @@ typedef enum : uint8_t
     STATE_ERROR_NO_MESSAGES
 } State;
 
-#define NO_RECV_ERROR_THRESHOLD_MS 5000 // If we get no data after this time, the audio module isn't communicating
+#define NO_RECV_ERROR_THRESHOLD_MS 5000  // If we get no data after this time, the audio module isn't communicating
 #define TIME_FROM_IDLE_TO_SLEEP_MS 10000
 #define MESSAGE_SLEEP_TIME 3000
 #define MESSAGE_DISCONNECT_TIME 4000
@@ -97,7 +97,7 @@ void loop()
             if (timeSinceStateSwitchedMS() > TIME_FROM_IDLE_TO_SLEEP_MS)
             {
                 switchStateWithIntermediate(STATE_SLEEP, STATE_TRANSITION_MESSAGE, MESSAGE_SLEEP_TIME);
-                // TODO: Display "going to sleep" message here
+                displayMessage("Sleeping in", "3 seconds...", false);
             }
     }
 }
@@ -129,7 +129,7 @@ void switchStateInstant(State endState)
     State previous = state;
 
     esp_timer_stop(stateSwitchTimer);
-    switchingState = false; // TODO: Maybe move this to stateTimerCB and return from the fn if switchingState?
+    switchingState = false;  // TODO: Maybe move this to stateTimerCB and return from the fn if switchingState?
     state = endState;
     lastStateSwitchTimeMS = millis();
 
@@ -155,6 +155,24 @@ void afterStateSwitched(State from, State to)
     log_i("Switch to state %d from state %d", endState, state);
 
     // TODO: Stuff like turn display back on from sleep
+
+    // FROM STATE
+    switch (from)
+    {
+        case STATE_SLEEP:
+            lcd.backLight(); // Turn display back on
+    }
+
+    // TO STATE
+    switch (to)
+    {
+        case STATE_SLEEP:
+            lcd.clear();
+            lcd.noBackLight(); // Turn display off
+        case STATE_IDLE:
+            lcd.clear();
+            displayMessage("No device connected", "Press to pair device", false);
+    }
 }
 
 
@@ -254,7 +272,8 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                 {
                     memcpy(&connectedDisconnected, msg, sizeof(BTInfoMsg));
                     switchStateWithIntermediate(STATE_DISPLAY, STATE_TRANSITION_MESSAGE, MESSAGE_CONNECT_TIME);
-                    // TODO: Show 'connected to X' message here
+                    displayMessage("Connected to", connectedDisconnected.sourceDevice.deviceName, true);
+                    // TODO: Move this to afterStateSwitched for consistency?
 
                     // msg->sourceDevice.
                     // uint8_t address[6];
@@ -268,6 +287,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                     if (state == STATE_IDLE || state == STATE_DISPLAY)
                     {
                         switchStateWithIntermediate(STATE_IDLE, STATE_TRANSITION_MESSAGE, MESSAGE_DISCONNECT_TIME);
+                        displayMessage("Disconnected from", connectedDisconnected.sourceDevice.deviceName, true);
                         // TODO: Show 'disconnected from X' message here
                     }
                     // msg->sourceDevice.
@@ -322,4 +342,37 @@ void displayMetadata()
 
     lcd.setCursor(0, 3);
     lcd.print(songInfo.songInfo.trackLengthMS / 1000);
+}
+
+void displayMessage(const char* firstLine, const char* secondLine, bool overflowSecondLine)
+{
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    printCentered(firstLine);
+    lcd.setCursor(0, 2);
+    if (overflowSecondLine)
+        lcd.print(secondLine);  // Don't print centered so it can wrap around
+    else
+        printCentered(secondLine);
+}
+
+void printCentered(const char* text)
+{
+    if (text == nullptr)
+        return;
+
+    // e.g. Hello
+    // len = 5
+    // center = 10 - (5 / 2) = 8
+    // ''''''''------------
+    // ''''''''Hello-------
+    // ''''''''Hello0------
+
+    char line[21] = { 0 };
+    int len = strnlen(text, 20);
+    int center = 10 - len / 2;        // Divide will floor so this will always be right
+    memset(line, ' ', center);        // Spaces to pad
+    memcpy(line[center], text, len);  // Copy text
+    line[center + len] = 0;           // Null terminate
+    lcd.print(line);
 }
