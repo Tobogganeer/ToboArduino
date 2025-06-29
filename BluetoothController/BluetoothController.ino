@@ -42,16 +42,22 @@ typedef enum : uint8_t
     STATE_ERROR_NO_MESSAGES
 } State;
 
-#define NO_RECV_ERROR_THRESHOLD_MS = 5000; // If we get no data after this time, the audio module isn't communicating
+#define NO_RECV_ERROR_THRESHOLD_MS 5000 // If we get no data after this time, the audio module isn't communicating
+#define TIME_FROM_IDLE_TO_SLEEP_MS 10000
+#define MESSAGE_SLEEP_TIME 3000
+#define MESSAGE_DISCONNECT_TIME 4000
+#define MESSAGE_CONNECT_TIME 2000
 
 
 State state;
 State nextState;
 esp_timer_handle_t stateSwitchTimer;
 bool switchingState;
+long lastStateSwitchTimeMS;
 
 BTInfoMsg devices;
 BTInfoMsg songInfo;
+BTInfoMsg connectedDisconnected;
 
 
 void setup()
@@ -85,7 +91,15 @@ void loop()
     // Make sure we are receiving messages
     checkError();
 
-
+    switch (state)
+    {
+        case STATE_IDLE:
+            if (timeSinceStateSwitchedMS() > TIME_FROM_IDLE_TO_SLEEP_MS)
+            {
+                switchStateWithIntermediate(STATE_SLEEP, STATE_TRANSITION_MESSAGE, MESSAGE_SLEEP_TIME);
+                // TODO: Display "going to sleep" message here
+            }
+    }
 }
 
 void checkError()
@@ -112,21 +126,42 @@ void stateTimerCB(void* arg)
 
 void switchStateInstant(State endState)
 {
-    log_i("Switch to state %d from state %d", endState, state);
+    State previous = state;
 
     esp_timer_stop(stateSwitchTimer);
     switchingState = false; // TODO: Maybe move this to stateTimerCB and return from the fn if switchingState?
     state = endState;
+    lastStateSwitchTimeMS = millis();
+
+    afterStateSwitched(previous, endState);
 }
 
 void switchStateWithIntermediate(State endState, State intermediateState, uint32_t timeInIntermediateStateMS)
 {
     switchingState = true;
+    State previous = state;
 
     esp_timer_stop(stateSwitchTimer);                                          // Stop before (re)starting
     esp_timer_start_once(stateSwitchTimer, timeInIntermediateStateMS * 1000);  // Convert to us from ms
     nextState = endState;
     state = intermediateState;
+    lastStateSwitchTimeMS = millis();
+
+    afterStateSwitched(previous, intermediateState);
+}
+
+void afterStateSwitched(State from, State to)
+{
+    log_i("Switch to state %d from state %d", endState, state);
+
+    // TODO: Stuff like turn display back on from sleep
+}
+
+
+
+long timeSinceStateSwitchedMS()
+{
+    return millis() - lastStateSwitchTimeMS;
 }
 
 void splashScreen()
@@ -217,6 +252,10 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                 }
             case BT_INFO_CONNECTED:
                 {
+                    memcpy(&connectedDisconnected, msg, sizeof(BTInfoMsg));
+                    switchStateWithIntermediate(STATE_DISPLAY, STATE_TRANSITION_MESSAGE, MESSAGE_CONNECT_TIME);
+                    // TODO: Show 'connected to X' message here
+
                     // msg->sourceDevice.
                     // uint8_t address[6];
                     // char deviceName[32];
@@ -224,6 +263,13 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                 }
             case BT_INFO_DISCONNECTED:
                 {
+                    memcpy(&connectedDisconnected, msg, sizeof(BTInfoMsg));
+                    // Only say 'disconnected' if we are showing info - disconnecting while in settings in intentional
+                    if (state == STATE_IDLE || state == STATE_DISPLAY)
+                    {
+                        switchStateWithIntermediate(STATE_IDLE, STATE_TRANSITION_MESSAGE, MESSAGE_DISCONNECT_TIME);
+                        // TODO: Show 'disconnected from X' message here
+                    }
                     // msg->sourceDevice.
                     // uint8_t address[6];
                     // char deviceName[32];
