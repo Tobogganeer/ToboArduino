@@ -361,8 +361,29 @@ void displayMusic()
     int totalMins = (songInfo.songInfo.trackLengthMS / 1000) / 60;
     int totalSecs = (songInfo.songInfo.trackLengthMS / 1000) % 60;
     // e.g. 4:52 / 5:06
-    sprintf(line, "%d:%.2d / %d:%.2d", currentMins, currentSecs, totalMins, totalSecs);
-    lcd.print(line);
+    // PAUSED---4:52 / 5:06
+    // 4:52 / 5:06---PAUSED
+    // ''''''''''''''''''''
+    char fullLine[21] = { 0 }; // Other 'line' is shorter as it ignores the symbol and space (e.g. the artist symbol)
+    sprintf(fullLine, "%d:%.2d / %d:%.2d", currentMins, currentSecs, totalMins, totalSecs);
+
+    if (playbackStatus == PLAYBACK_PAUSED)
+    {
+        // Add 'PAUSED' to end of line
+        const char* pausedText = "PAUSED";
+        int pausedLen = strlen(pausedText);
+        memcpy(fullLine[20 - pausedLen], pausedText, strlen(pausedText));
+        fullLine[20] = 0; // Null terminate
+
+        // Fill space between time and PAUSED with spaces
+        int timeLen = strlen(fullLine);
+        memset(fullLine[timeLen], 0, 20 - pausedLen - timeLen);
+        // 4:52 / 5:06---PAUSED
+        // ''''''''''''''''''''
+        // timeLen: 11
+        // pausedLen: 6
+    }
+    lcd.print(fullLine);
     // TODO: Take status into account (paused at least)
 }
 
