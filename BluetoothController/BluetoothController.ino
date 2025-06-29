@@ -9,6 +9,8 @@ This board will communicate via ESP-NOW and drive the display/settings
 #include <LiquidCrystal_I2C.h>
 #include <CarComms.h>
 #include "esp_timer.h"
+#include "Rotary.h"
+#include "Button2.h";
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 CarComms comms(handleCarData);
@@ -48,6 +50,13 @@ typedef enum : uint8_t
 #define MESSAGE_DISCONNECT_TIME 4000
 #define MESSAGE_CONNECT_TIME 2000
 
+// TODO: Change these once it's actually connected
+#define ROTARY_PIN1 2
+#define ROTARY_PIN2 0
+#define ROTARY_BUTTON 3
+
+#define CLICKS_PER_ROTATION 4  // The encoder outputs 4 times when rotated once
+
 
 State state;
 State nextState;
@@ -58,9 +67,11 @@ long lastStateSwitchTimeMS;
 BTInfoMsg devices;
 BTInfoMsg songInfo;
 BTInfoMsg connectedDisconnected;
-uint8_t playbackStatus; // esp_avrc_playback_stat_t
+uint8_t playbackStatus;  // esp_avrc_playback_stat_t
 uint32_t playPosMS;
 
+Rotary dial;
+Button2 dialButton;
 
 void setup()
 {
@@ -68,6 +79,7 @@ void setup()
     lcd.backlight();
 
     initIcons();  // Icons.h
+    initDial();
 
 #ifdef DEBUG
     Serial.begin(115200);
@@ -87,11 +99,24 @@ void setup()
     esp_timer_create(&timerArgs, &stateSwitchTimer);
 }
 
+void initDial()
+{
+    dial.begin(ROTARY_PIN1, ROTARY_PIN2, CLICKS_PER_ROTATION);
+    dial.setLeftRotationHandler(rotateLeft);
+    dial.setRightRotationHandler(rotateRight);
+
+    dialButton.begin(ROTARY_BUTTON);
+    dialButton.setTapHandler(click);
+}
+
 
 void loop()
 {
     // Make sure we are receiving messages
     checkError();
+
+    dial.loop();
+    dialButton.loop();
 
     switch (state)
     {
@@ -163,7 +188,7 @@ void afterStateSwitched(State from, State to)
     switch (from)
     {
         case STATE_SLEEP:
-            lcd.backLight(); // Turn display back on
+            lcd.backLight();  // Turn display back on
             break;
     }
 
@@ -172,7 +197,7 @@ void afterStateSwitched(State from, State to)
     {
         case STATE_SLEEP:
             lcd.clear();
-            lcd.noBackLight(); // Turn display off
+            lcd.noBackLight();  // Turn display off
             break;
         case STATE_IDLE:
             lcd.clear();
@@ -364,7 +389,7 @@ void displayMusic()
     // PAUSED---4:52 / 5:06
     // 4:52 / 5:06---PAUSED
     // ''''''''''''''''''''
-    char fullLine[21] = { 0 }; // Other 'line' is shorter as it ignores the symbol and space (e.g. the artist symbol)
+    char fullLine[21] = { 0 };  // Other 'line' is shorter as it ignores the symbol and space (e.g. the artist symbol)
     sprintf(fullLine, "%d:%.2d / %d:%.2d", currentMins, currentSecs, totalMins, totalSecs);
 
     if (playbackStatus == PLAYBACK_PAUSED)
@@ -373,7 +398,7 @@ void displayMusic()
         const char* pausedText = "PAUSED";
         int pausedLen = strlen(pausedText);
         memcpy(fullLine[20 - pausedLen], pausedText, strlen(pausedText));
-        fullLine[20] = 0; // Null terminate
+        fullLine[20] = 0;  // Null terminate
 
         // Fill space between time and PAUSED with spaces
         int timeLen = strlen(fullLine);
@@ -418,4 +443,20 @@ void printCentered(const char* text)
     memcpy(line[center], text, len);  // Copy text
     line[center + len] = 0;           // Null terminate
     lcd.print(line);
+}
+
+
+void rotateLeft(Rotary& dial)
+{
+    // Left
+}
+
+void rotateRight(Rotary& dial)
+{
+    // Right
+}
+
+void click(Button2& btn)
+{
+    // Click
 }
