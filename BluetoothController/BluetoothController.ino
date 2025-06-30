@@ -95,8 +95,6 @@ char cachedAlbum[19] = { 0 };
 char cachedPlayTime[21] = { 0 };
 char blankLine[21] = { 0 };
 
-esp_timer_handle_t playPosTimer;
-
 
 void switchStateInstant(State endState);
 void switchStateWithIntermediate(State endState, State intermediateState, uint32_t timeInIntermediateStateMS);
@@ -127,12 +125,6 @@ void setup()
         .name = "stateSwitchTimer"
     };
     esp_timer_create(&timerArgs, &stateSwitchTimer);
-
-    esp_timer_create_args_t playPosTimerArgs = {
-        .callback = &playPosTimerCallback,
-        .name = "playPosTimer"
-    };
-    esp_timer_create(&playPosTimerArgs, &playPosTimer);
 
     memset(blankLine, ' ', 20);  // Set first 20 chars to spaces
 }
@@ -180,21 +172,6 @@ void checkError()
             // Switch no matter what - no point going to settings if we can't set anything
             switchStateInstant(STATE_ERROR_NO_MESSAGES);
         }
-    }
-}
-
-// Used to increment timer when PLAY_POS_CHANGED isn't supported (like on my phone)
-void playPosTimerCallback(void* arg)
-{
-    if (playbackStatus == PLAYBACK_PLAYING)
-    {
-        playPosMS += 1000;
-        uint32_t songLen = songInfo.songInfo.trackLengthMS;
-        if (playPosMS > songLen)
-            playPosMS = songLen;
-
-        if (state == STATE_DISPLAY)
-            displayMusic();
     }
 }
 
@@ -331,24 +308,6 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                             displayMusic();
                             break;
                     }
-                    break;
-                }
-            case BT_UPDATE_PLAY_STATUS:
-                {
-                    /*
-                    struct {
-                        uint32_t trackLengthMS;
-                        uint32_t playPosMS;
-                        uint8_t playStatus; // esp_avrc_playback_stat_t
-                        bool playing;
-                    } playStatus;
-                    */
-                    playPosMS = msg->playStatus.playPosMS;
-                    playbackStatus = msg->playStatus.playStatus;
-                    displayMusic();
-
-                    esp_timer_stop(playPosTimer);
-                    esp_timer_start_periodic(playPosTimer, 1000 * 1000); // Tick every second to increment timer
                     break;
                 }
         }

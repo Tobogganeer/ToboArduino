@@ -41,7 +41,6 @@ typedef enum : uint8_t {
 	BT_UPDATE_SET_DISCOVERABLE,
 	BT_UPDATE_DEVICE_CONNECT, // These are in TrackUpdate so the main BTAudio can listen for the packets
 	BT_UPDATE_DEVICE_DISCONNECT,
-	BT_UPDATE_PLAY_STATUS, // Cheeky way to get play pos
 } BTTrackUpdateType;
 
 typedef enum : uint8_t {
@@ -145,12 +144,6 @@ typedef struct BTTrackUpdateMsg {
 			bool pause;
 			bool play;
 		} skipUpdate;
-		struct {
-			uint32_t trackLengthMS;
-			uint32_t playPosMS;
-			uint8_t playStatus; // esp_avrc_playback_stat_t
-			bool playing;
-		} playStatus;
 	};
 	
 } BTTrackUpdateMsg;

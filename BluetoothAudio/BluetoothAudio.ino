@@ -8,11 +8,9 @@ CarComms comms(handleCarData);
 
 esp_timer_handle_t refreshMetadataTimer;
 esp_timer_handle_t sendDeviceInfoTimer;
-esp_timer_handle_t playbackStatusTimer;
 
 #define METADATA_REFRESH_TIME_MS 3000 // Also refreshed when track changes
 #define SEND_DEVICE_INFO_TIME_MS 5000
-#define PLAYBACK_REFRESH_TIME_MS 3000
 
 // https://www.youtube.com/watch?v=QixtxaAda18
 
@@ -56,13 +54,6 @@ void setup()
     esp_timer_create(&deviceInfoTimerArgs, &sendDeviceInfoTimer);
     esp_timer_start_periodic(sendDeviceInfoTimer, SEND_DEVICE_INFO_TIME_MS * 1000); // Units are us
 
-    esp_timer_create_args_t playbackStatusTimerArgs = {
-        .callback = &requestPlaybackStatus,
-        .name = "playbackStatusTimer"
-    };
-    esp_timer_create(&playbackStatusTimerArgs, &playbackStatusTimer);
-    esp_timer_start_periodic(playbackStatusTimer, PLAYBACK_REFRESH_TIME_MS * 1000); // Units are us
-
     // "Subscribe" to callbacks
     audio.devicesSavedCallback = devicesSavedCallback;
     audio.connectedCallback = connectedCallback;
@@ -71,7 +62,6 @@ void setup()
     audio.playStatusChangedCallback = playStatusChangedCallback;
     audio.trackChangedCallback = trackChangedCallback;
     audio.playPositionChangedCallback = playPositionChangedCallback;
-    audio.playStatusCallback = playStatusCallback;
 }
 
 void refreshMetadata(void* arg)
@@ -88,11 +78,6 @@ void sendDeviceInfo(void* arg)
     PairedDevices devices;
     audio.loadDevices(&devices);
     devicesSavedCallback(&devices);
-}
-
-void requestPlaybackStatus(void* arg)
-{
-    audio.updatePlayStatus();
 }
 
 void devicesSavedCallback(const PairedDevices* devices)
@@ -184,17 +169,6 @@ void playPositionChangedCallback(uint32_t playPosMS)
 
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
 }
-
-void playStatusCallback(const PlaybackStatus* status)
-{
-    BTTrackUpdateMsg msg;
-    msg.type = BTTrackUpdateType::BT_UPDATE_PLAY_STATUS;
-    memcpy(&msg.playStatus, status, sizeof(PlaybackStatus));
-
-    comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
-}
-
-
 
 
 
