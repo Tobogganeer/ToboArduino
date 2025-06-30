@@ -92,7 +92,7 @@ int numOptions;
 char cachedTitle[19] = { 0 };
 char cachedArtist[19] = { 0 };
 char cachedAlbum[19] = { 0 };
-char cachedPlayTime[21] = { 0 };
+char cachedPlayTime[19] = { 0 };
 char blankLine[21] = { 0 };
 
 
@@ -250,6 +250,7 @@ void afterStateSwitched(State from, State to)
             break;
         case STATE_DISPLAY:
             // Clear cached strings so we re-print everything
+            lcd.clear();
             memset(cachedTitle, 0, 19);
             memset(cachedArtist, 0, 19);
             memset(cachedAlbum, 0, 19);
@@ -446,39 +447,40 @@ void displayMusic()
     }
 
     // Song time
-    int currentMins = (playPosMS / 1000) / 60;
-    int currentSecs = (playPosMS / 1000) % 60;
+    //int currentMins = (playPosMS / 1000) / 60;
+    //int currentSecs = (playPosMS / 1000) % 60;
     int totalMins = (songInfo.songInfo.trackLengthMS / 1000) / 60;
     int totalSecs = (songInfo.songInfo.trackLengthMS / 1000) % 60;
-    // e.g. 4:52 / 5:06
-    // PAUSED---4:52 / 5:06
-    // 4:52 / 5:06---PAUSED
+    // T 5:06--------PAUSED
     // ''''''''''''''''''''
-    char fullLine[21] = { 0 };  // Other 'line' is shorter as it ignores the symbol and space (e.g. the artist symbol)
-    sprintf(fullLine, "%d:%.2d / %d:%.2d", currentMins, currentSecs, totalMins, totalSecs);
+    char timeLine[19] = { 0 }; 
+    sprintf(timeLine, "%d:%.2d", totalMins, totalSecs);
 
     if (playbackStatus == PLAYBACK_PAUSED)
     {
         // Add 'PAUSED' to end of line
         const char* pausedText = "PAUSED";
         int pausedLen = strlen(pausedText);
-        memcpy(&fullLine[20 - pausedLen], pausedText, strlen(pausedText));
-        fullLine[20] = 0;  // Null terminate
+        memcpy(&timeLine[18 - pausedLen], pausedText, strlen(pausedText));
+        timeLine[18] = 0;  // Null terminate
 
         // Fill space between time and PAUSED with spaces
-        int timeLen = strlen(fullLine);
-        memset(&fullLine[timeLen], 0, 20 - pausedLen - timeLen);
-        // 4:52 / 5:06---PAUSED
+        int timeLen = strlen(timeLine);
+        memset(&timeLine[timeLen], 0, 18 - pausedLen - timeLen);
+        // T 5:06--------PAUSED
         // ''''''''''''''''''''
-        // timeLen: 11
+        // timeLen: 4
         // pausedLen: 6
     }
-    if (strncmp(cachedPlayTime, fullLine, 21) != 0)
+
+    if (strncmp(cachedPlayTime, timeLine, 18) != 0)
     {
-        memcpy(cachedPlayTime, fullLine, 21);
+        memcpy(cachedPlayTime, timeLine, 18);
         lcd.setCursor(0, 3);
         lcd.print(blankLine);
         lcd.setCursor(0, 3);
+        lcd.write(ICON_TIME);
+        lcd.setCursor(2, 3);
         lcd.print(cachedPlayTime);
     }
 }
@@ -490,7 +492,25 @@ void displayMessage(const char* firstLine, const char* secondLine, bool overflow
     printCentered(firstLine);
     lcd.setCursor(0, 2);
     if (overflowSecondLine)
-        lcd.print(secondLine);  // Don't print centered so it can wrap around
+    {
+        int len = strnlen(secondLine, 40);
+        if (len <= 20)
+            printCentered(secondLine);
+        else
+        {
+            // Split up line into two and print both
+            char half[21];
+            memcpy(half, secondLine, 20);
+            half[20] = 0; // Null-terminate
+            printCentered(half);
+
+            // Print other half
+            lcd.setCursor(0, 3);
+            memcpy(half, &secondLine[20], 20);
+            printCentered(half);
+        }
+        //lcd.print(secondLine);  // Don't print centered so it can wrap around
+    }
     else
         printCentered(secondLine);
 }

@@ -4,6 +4,7 @@
 #define ICON_ARTIST 1
 #define ICON_ALBUM 2
 #define ICON_FAVOURITE 3
+#define ICON_TIME 4
 
 uint8_t songIcon[8] = {
     0b00000,
@@ -49,10 +50,22 @@ uint8_t favouriteIcon[8] = {
     0b00000,
 };
 
+uint8_t timeIcon[8] = {
+    0b00000,
+    0b01110,
+    0b10101,
+    0b10111,
+    0b10001,
+    0b01110,
+    0b00000,
+    0b00000,
+};
+
 void initIcons()
 {
     lcd.createChar(ICON_SONG, songIcon);
     lcd.createChar(ICON_ARTIST, artistIcon);
     lcd.createChar(ICON_ALBUM, albumIcon);
     lcd.createChar(ICON_FAVOURITE, favouriteIcon);
+    lcd.createChar(ICON_TIME, timeIcon);
 }
