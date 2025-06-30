@@ -141,7 +141,8 @@ void playStatusChangedCallback(esp_avrc_playback_stat_t status)
     msg.songUpdate.updateType = BTTrackSongPosUpdateType::BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE;
     msg.songUpdate.playback = status;
 
-    comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
+    bool sent = comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
+    log_i("Sent play status: %d", sent);
 }
 
 void trackChangedCallback()

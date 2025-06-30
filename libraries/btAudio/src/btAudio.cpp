@@ -38,6 +38,15 @@ int reconnectIndex = 0;
 bool btAudio::reconnecting = false;
 esp_timer_handle_t reconnectTimer;
 
+uint8_t btAudio::tl = 0;
+
+uint8_t btAudio::nextTL()
+{
+    // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/bluetooth/esp_avrc.html#_CPPv442esp_avrc_ct_send_register_notification_cmd7uint8_t7uint8_t8uint32_t
+    tl = (tl + 1) % 16;  // Cycle from 0 to 15
+    return tl;
+}
+
 ////////////////////////////////////////////////////////////////////
 ////////////////////////// Constructor /////////////////////////////
 ////////////////////////////////////////////////////////////////////
@@ -282,7 +291,7 @@ void btAudio::updateMeta()
     }
     //log_i("Sent metadata request to device");
     uint8_t attr_mask = ESP_AVRC_MD_ATTR_TITLE | ESP_AVRC_MD_ATTR_ARTIST | ESP_AVRC_MD_ATTR_ALBUM | ESP_AVRC_MD_ATTR_PLAYING_TIME;
-    esp_avrc_ct_send_metadata_cmd(1, attr_mask);
+    esp_avrc_ct_send_metadata_cmd(nextTL(), attr_mask);
 }
 void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
 {
@@ -301,10 +310,12 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                 if (avrcConnected)
                 {
                     log_i("AVRC connected");
-                    // Ask it to tell us when the time, track etc changes every 200ms
-                    esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
-                    esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_TRACK_CHANGE, 0);
-                    esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_PLAY_POS_CHANGED, 200);
+                    // get remote supported event_ids of peer AVRCP Target
+                    esp_avrc_ct_send_get_rn_capabilities_cmd(nextTL());
+                    // Ask it to tell us when the time, track etc changes every second
+                    //esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
+                    //esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_TRACK_CHANGE, 0);
+                    //esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_PLAY_POS_CHANGED, 1);
                 }
                 break;
             }
@@ -353,7 +364,7 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                             esp_avrc_playback_stat_t playback = rc->change_ntf.event_parameter.playback;
                             if (playStatusChangedCallback)
                                 playStatusChangedCallback(playback);
-                            esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
+                            esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
                             /*
                     ESP_AVRC_PLAYBACK_STOPPED = 0
                     ESP_AVRC_PLAYBACK_PLAYING = 1
@@ -369,21 +380,32 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                             // rc->change_ntf.event_parameter.elm_id is a uint8_t[8], just a song ID used to get metadata
                             if (trackChangedCallback)
                                 trackChangedCallback();
-                            esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_TRACK_CHANGE, 0);
+                            esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_TRACK_CHANGE, 0);
                             break;
                         }
                     case ESP_AVRC_RN_PLAY_POS_CHANGED:
                         {
                             log_i("Play position changed");
-                            // TODO: Message about play pos
                             uint32_t playPosMS = rc->change_ntf.event_parameter.play_pos;
                             currentTrackPosMS = playPosMS;
                             if (playPositionChangedCallback)
                                 playPositionChangedCallback(playPosMS);
-                            esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_PLAY_POS_CHANGED, 200);
+                            esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_PLAY_POS_CHANGED, 1);
                             break;
                         }
                 }
+                break;
+            }
+        case ESP_AVRC_CT_GET_RN_CAPABILITIES_RSP_EVT:
+            {
+                log_i("remote rn_cap: count %d, bitmask 0x%x",
+                        rc->get_rn_caps_rsp.cap_count, rc->get_rn_caps_rsp.evt_set.bits);
+                
+                // https://github.com/pschatzmann/ESP32-A2DP/blob/79a38581dabc235c5cf22e58e9feb5d2fcea3017/src/BluetoothA2DPSink.cpp#L824
+                // Ask it to tell us when the time, track etc changes every second
+                esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
+                esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_TRACK_CHANGE, 0);
+                esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_PLAY_POS_CHANGED, 1);
                 break;
             }
         default:

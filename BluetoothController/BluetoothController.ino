@@ -92,7 +92,7 @@ int numOptions;
 char cachedTitle[19] = { 0 };
 char cachedArtist[19] = { 0 };
 char cachedAlbum[19] = { 0 };
-char cachedPlayTime[19] = { 0 };
+char cachedPlayTime[21] = { 0 };
 char blankLine[21] = { 0 };
 
 
@@ -250,6 +250,13 @@ void afterStateSwitched(State from, State to)
         case STATE_SETTINGS_DEVICE:
             numOptions = 6;
             break;
+        case STATE_DISPLAY:
+            // Clear cached strings so we re-print everything
+            memset(cachedTitle, 0, 19);
+            memset(cachedArtist, 0, 19);
+            memset(cachedAlbum, 0, 19);
+            memset(cachedPlayTime, 0, 21);
+            break;
     }
 }
 
@@ -403,21 +410,8 @@ void displayMusic()
 
     // Only write lines if they have changed
 
-    // Title
-    log_i("MEMCMP %d", memcmp(cachedTitle, songInfo.songInfo.title, 18));
-    char test[3] = { 3 };
-    log_i("MEMCMP TEST %d", memcmp(test, test, 18));
-
-    for (int i = 0; i < 18; i++)
-    {
-        log_i("Byte %2d: cached=%3d (0x%02X), new=%3d (0x%02X)",
-              i, cachedTitle[i], cachedTitle[i],
-              songInfo.songInfo.title[i], songInfo.songInfo.title[i]);
-    }
-
     if (strncmp(cachedTitle, songInfo.songInfo.title, 18) != 0)
     {
-        log_i("CACHED TITLE:\n%s\nNEW TITLE:\n%s", cachedTitle, songInfo.songInfo.title);
         memcpy(cachedTitle, songInfo.songInfo.title, 18);
         lcd.setCursor(0, 0);
         lcd.print(blankLine);
@@ -425,7 +419,6 @@ void displayMusic()
         lcd.write(ICON_SONG);
         lcd.setCursor(2, 0);
         lcd.print(cachedTitle);
-        log_i("Update title");
     }
 
     // Artist
@@ -438,7 +431,6 @@ void displayMusic()
         lcd.write(ICON_ARTIST);
         lcd.setCursor(2, 1);
         lcd.print(cachedArtist);
-        log_i("Update artist");
     }
 
     // Album
@@ -451,7 +443,6 @@ void displayMusic()
         lcd.write(ICON_ALBUM);
         lcd.setCursor(2, 2);
         lcd.print(cachedAlbum);
-        log_i("Update album");
     }
 
     // Song time
@@ -489,7 +480,6 @@ void displayMusic()
         lcd.print(blankLine);
         lcd.setCursor(0, 3);
         lcd.print(cachedPlayTime);
-        log_i("Update time");
     }
 }
 

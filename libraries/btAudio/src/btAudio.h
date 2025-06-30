@@ -95,6 +95,9 @@ class btAudio
     static uint8_t _address[6];
     static float _vol;
     static bool reconnecting;
+
+    static uint8_t tl;
+    static uint8_t nextTL();
 };
 
 
