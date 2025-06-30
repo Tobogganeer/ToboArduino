@@ -25,6 +25,7 @@ void (*btAudio::metadataUpdatedCallback)();
 void (*btAudio::playStatusChangedCallback)(esp_avrc_playback_stat_t status);
 void (*btAudio::trackChangedCallback)();
 void (*btAudio::playPositionChangedCallback)(uint32_t playPosMS);
+void (*btAudio::playStatusCallback)(const PlaybackStatus* status);
 
 Preferences preferences;
 
@@ -293,6 +294,14 @@ void btAudio::updateMeta()
     uint8_t attr_mask = ESP_AVRC_MD_ATTR_TITLE | ESP_AVRC_MD_ATTR_ARTIST | ESP_AVRC_MD_ATTR_ALBUM | ESP_AVRC_MD_ATTR_PLAYING_TIME;
     esp_avrc_ct_send_metadata_cmd(nextTL(), attr_mask);
 }
+
+void btAudio::updatePlayStatus()
+{
+    // TODO: I don't think I'm using transaction labels correct
+    // I don't think I need to increment them every time? just different for each cmd
+    esp_avrc_ct_send_get_play_status_cmd(nextTL());
+}
+
 void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t *param)
 {
     esp_avrc_ct_cb_param_t *rc = (esp_avrc_ct_cb_param_t *)(param);
@@ -408,9 +417,33 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                 esp_avrc_ct_send_register_notification_cmd(nextTL(), ESP_AVRC_RN_PLAY_POS_CHANGED, 1);
                 break;
             }
+        case ESP_AVRC_CT_GET_PLAY_STATUS_RSP_EVT:
+            {
+                if (playStatusCallback != nullptr)
+                {
+                    PlaybackStatus status;
+                    status.trackLengthMS = rc->get_play_status_rsp.song_len;
+                    status.playPosMS = rc->get_play_status_rsp.song_pos;
+                    status.playStatus = rc->get_play_status_rsp.play_status;
+                    status.playing = (status.playStatus == ESP_AVRC_PLAYBACK_PLAYING);
+                    playStatusCallback(&status);
+                }
+                /*
+                
+                struct {
+                    uint32_t trackLengthMS;
+                    uint32_t playPosMS;
+                    uint8_t playStatus; // esp_avrc_playback_stat_t
+                    bool playing;
+                } playStatus;
+                
+                */
+                break;
+            }
         default:
             ESP_LOGE("RCCT", "unhandled AVRC event: %d", event);
             break;
+
     }
 }
 

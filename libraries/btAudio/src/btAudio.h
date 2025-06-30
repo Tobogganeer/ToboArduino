@@ -21,6 +21,13 @@ typedef struct PairedDevices {
     esp_bd_addr_t connected;
 } PairedDevices;
 
+typedef struct PlaybackStatus {
+    uint32_t trackLengthMS;
+    uint32_t playPosMS;
+    esp_avrc_playback_stat_t playStatus;
+    bool playing;
+} PlaybackStatus;
+
 class btAudio
 {
   public:
@@ -35,6 +42,7 @@ class btAudio
     void reconnect();
     void setSinkCallback(void (*sinkCallback)(const uint8_t *data, uint32_t len));
     void setDiscoverable(bool discoverable);
+    void updatePlayStatus();
 
     // I2S Audio
     void I2S(int bck, int dout, int ws);
@@ -50,6 +58,7 @@ class btAudio
     static void (*playStatusChangedCallback)(esp_avrc_playback_stat_t status);
     static void (*trackChangedCallback)();
     static void (*playPositionChangedCallback)(uint32_t playPosMS);
+    static void (*playStatusCallback)(const PlaybackStatus* status);
 
     static String title;
     static String artist;
