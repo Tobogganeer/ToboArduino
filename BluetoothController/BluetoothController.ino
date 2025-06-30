@@ -10,7 +10,7 @@ This board will communicate via ESP-NOW and drive the display/settings
 #include <CarComms.h>
 #include "esp_timer.h"
 #include "Rotary.h"
-#include "Button2.h";
+#include "Button2.h"
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 CarComms comms(handleCarData);
@@ -25,10 +25,11 @@ CarComms comms(handleCarData);
 #define PLAYBACK_REV_SEEK 4
 #define PLAYBACK_ERROR 0xFF
 
-//#define DEBUG
+#define DEBUG
 
+typedef uint8_t State;
 
-typedef enum : uint8_t
+enum : uint8_t
 {
     STATE_SPLASHSCREEN,
     STATE_RECONNECTING,
@@ -42,7 +43,7 @@ typedef enum : uint8_t
     STATE_DISCOVERABLE,
     STATE_TRANSITION_MESSAGE,
     STATE_ERROR_NO_MESSAGES
-} State;
+};
 
 #define NO_RECV_ERROR_THRESHOLD_MS 5000  // If we get no data after this time, the audio module isn't communicating
 #define TIME_FROM_IDLE_TO_SLEEP_MS 10000
@@ -51,9 +52,9 @@ typedef enum : uint8_t
 #define MESSAGE_CONNECT_TIME 2000
 
 // TODO: Change these once it's actually connected
-#define ROTARY_PIN1 2
-#define ROTARY_PIN2 0
-#define ROTARY_BUTTON 3
+#define ROTARY_PIN1 13
+#define ROTARY_PIN2 12
+#define ROTARY_BUTTON 26
 
 #define CLICKS_PER_ROTATION 4  // The encoder outputs 4 times when rotated once
 
@@ -87,6 +88,12 @@ Button2 dialButton;
 
 int selectedOption;
 int numOptions;
+
+
+void switchStateInstant(State endState);
+void switchStateWithIntermediate(State endState, State intermediateState, uint32_t timeInIntermediateStateMS);
+void afterStateSwitched(State from, State to);
+
 
 void setup()
 {
@@ -195,7 +202,7 @@ void switchStateWithIntermediate(State endState, State intermediateState, uint32
 
 void afterStateSwitched(State from, State to)
 {
-    log_i("Switch to state %d from state %d", endState, state);
+    log_i("Switch to state %d from state %d", to, from);
 
     // Stuff like turn display back on from sleep
 
@@ -203,7 +210,7 @@ void afterStateSwitched(State from, State to)
     switch (from)
     {
         case STATE_SLEEP:
-            lcd.backLight();  // Turn display back on
+            lcd.backlight();  // Turn display back on
             break;
         case STATE_DISCOVERABLE:
             setDiscoverable(false); // Back into hiding
@@ -215,7 +222,7 @@ void afterStateSwitched(State from, State to)
     {
         case STATE_SLEEP:
             lcd.clear();
-            lcd.noBackLight();  // Turn display off
+            lcd.noBacklight();  // Turn display off
             break;
         case STATE_IDLE:
             lcd.clear();
@@ -223,7 +230,7 @@ void afterStateSwitched(State from, State to)
             break;
         case STATE_DISCOVERABLE:
             setDiscoverable(true); // Make visible to pairing
-            displayMessage("Bluetooth visible", "as 'Quandale's Whip'", false)
+            displayMessage("Bluetooth visible", "as 'Quandale's Whip'", false);
 
             // TODO: Disconnect when trying to pair, but if we leave and aren't connected, try reconnecting
             // TODO: Add packet/ability to start a reconnect from this end
@@ -427,12 +434,12 @@ void displayMusic()
         // Add 'PAUSED' to end of line
         const char* pausedText = "PAUSED";
         int pausedLen = strlen(pausedText);
-        memcpy(fullLine[20 - pausedLen], pausedText, strlen(pausedText));
+        memcpy(&fullLine[20 - pausedLen], pausedText, strlen(pausedText));
         fullLine[20] = 0;  // Null terminate
 
         // Fill space between time and PAUSED with spaces
         int timeLen = strlen(fullLine);
-        memset(fullLine[timeLen], 0, 20 - pausedLen - timeLen);
+        memset(&fullLine[timeLen], 0, 20 - pausedLen - timeLen);
         // 4:52 / 5:06---PAUSED
         // ''''''''''''''''''''
         // timeLen: 11
@@ -470,7 +477,7 @@ void printCentered(const char* text)
     int len = strnlen(text, 20);
     int center = 10 - len / 2;        // Divide will floor so this will always be right
     memset(line, ' ', center);        // Spaces to pad
-    memcpy(line[center], text, len);  // Copy text
+    memcpy(&line[center], text, len);  // Copy text
     line[center + len] = 0;           // Null terminate
     lcd.print(line);
 }
@@ -504,6 +511,8 @@ void printCentered(const char* text)
 
 void rotateLeft(Rotary& dial)
 {
+    log_i("Left");
+
     if (state == STATE_SLEEP)
         switchStateInstant(STATE_IDLE);
     else if (state == STATE_SETTINGS_MAIN || state == STATE_SETTINGS_DEVICE || state == STATE_SETTINGS_DEVICE_LIST)
@@ -520,6 +529,8 @@ void rotateLeft(Rotary& dial)
 
 void rotateRight(Rotary& dial)
 {
+    log_i("Right");
+
     if (state == STATE_SLEEP)
         switchStateInstant(STATE_IDLE);
     else if (state == STATE_SETTINGS_MAIN || state == STATE_SETTINGS_DEVICE || state == STATE_SETTINGS_DEVICE_LIST)
@@ -541,6 +552,8 @@ void selectedOptionChanged()
 
 void click(Button2& btn)
 {
+    log_i("Click");
+
     switch (state)
     {
         case STATE_SETTINGS_DEVICE_LIST:
@@ -566,6 +579,8 @@ void click(Button2& btn)
             switchStateInstant(STATE_IDLE);
             break;
         case STATE_DISCOVERABLE:
+        case STATE_IDLE:
+        case STATE_DISPLAY:
             // afterStateSwitched() handles setting discoverable
             switchStateInstant(STATE_SETTINGS_MAIN);
             break;

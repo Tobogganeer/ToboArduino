@@ -46,7 +46,7 @@ class CarComms
 
         CarComms(void (*recvCallback) (CarDataType type, const uint8_t* data, int len));
         void begin();
-        bool send(CarDataType type, const uint8_t* data, int len);
+        bool send(CarDataType type, void* data, int len);
         uint32_t getLastReceiveTimeMS();
         uint32_t getTimeSinceLastReceiveMS(); // Returns -1 if no message has been received
         uint32_t getLastReceiveTimeMS(CarDataType messageType);

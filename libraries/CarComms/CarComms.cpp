@@ -114,7 +114,7 @@ void CarComms::begin()
     esp_now_register_recv_cb(OnDataReceivedStatic);
 }
 
-bool CarComms::send(CarDataType type, const uint8_t* data, int len)
+bool CarComms::send(CarDataType type, void* data, int len)
 {
     // Max length is 250 and we are adding two bytes
     if (len > 247)

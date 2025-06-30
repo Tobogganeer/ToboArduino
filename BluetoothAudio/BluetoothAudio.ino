@@ -14,7 +14,7 @@ esp_timer_handle_t sendDeviceInfoTimer;
 
 // https://www.youtube.com/watch?v=QixtxaAda18
 
-//#define DEBUG
+#define DEBUG
 
 void setup()
 {
@@ -159,6 +159,7 @@ void playPositionChangedCallback(uint32_t playPosMS)
     msg.type = BTTrackUpdateType::BT_UPDATE_SONG_POS;
     msg.songUpdate.updateType = BTTrackSongPosUpdateType::BT_SONG_POS_UPDATE_PLAY_POS_CHANGED;
     msg.songUpdate.playPosMS = playPosMS;
+    log_i("Sent play pos %d", playPosMS / 1000);
 
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
 }
