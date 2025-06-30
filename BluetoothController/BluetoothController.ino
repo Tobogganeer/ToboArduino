@@ -89,6 +89,12 @@ Button2 dialButton;
 int selectedOption;
 int numOptions;
 
+char cachedTitle[19] = { 0 };
+char cachedArtist[19] = { 0 };
+char cachedAlbum[19] = { 0 };
+char cachedPlayTime[19] = { 0 };
+char blankLine[21] = { 0 };
+
 
 void switchStateInstant(State endState);
 void switchStateWithIntermediate(State endState, State intermediateState, uint32_t timeInIntermediateStateMS);
@@ -119,6 +125,8 @@ void setup()
         .name = "stateSwitchTimer"
     };
     esp_timer_create(&timerArgs, &stateSwitchTimer);
+
+    memset(blankLine, ' ', 20);  // Set first 20 chars to spaces
 }
 
 void initDial()
@@ -213,7 +221,7 @@ void afterStateSwitched(State from, State to)
             lcd.backlight();  // Turn display back on
             break;
         case STATE_DISCOVERABLE:
-            setDiscoverable(false); // Back into hiding
+            setDiscoverable(false);  // Back into hiding
             break;
     }
 
@@ -229,7 +237,7 @@ void afterStateSwitched(State from, State to)
             displayMessage("No device connected", "Press to enter menu", false);
             break;
         case STATE_DISCOVERABLE:
-            setDiscoverable(true); // Make visible to pairing
+            setDiscoverable(true);  // Make visible to pairing
             displayMessage("Bluetooth visible", "as 'Quandale's Whip'", false);
 
             // TODO: Disconnect when trying to pair, but if we leave and aren't connected, try reconnecting
@@ -391,33 +399,62 @@ Current progress
 
 void displayMusic()
 {
-    lcd.clear();
-    char line[19] = { 0 };
+    //lcd.clear();
+
+    // Only write lines if they have changed
 
     // Title
-    lcd.setCursor(0, 0);
-    lcd.write(ICON_SONG);
-    lcd.setCursor(2, 0);
-    memcpy(line, songInfo.songInfo.title, 18);
-    lcd.print(line);
+    log_i("MEMCMP %d", memcmp(cachedTitle, songInfo.songInfo.title, 18));
+    char test[3] = { 3 };
+    log_i("MEMCMP TEST %d", memcmp(test, test, 18));
+
+    for (int i = 0; i < 18; i++)
+    {
+        log_i("Byte %2d: cached=%3d (0x%02X), new=%3d (0x%02X)",
+              i, cachedTitle[i], cachedTitle[i],
+              songInfo.songInfo.title[i], songInfo.songInfo.title[i]);
+    }
+
+    if (strncmp(cachedTitle, songInfo.songInfo.title, 18) != 0)
+    {
+        log_i("CACHED TITLE:\n%s\nNEW TITLE:\n%s", cachedTitle, songInfo.songInfo.title);
+        memcpy(cachedTitle, songInfo.songInfo.title, 18);
+        lcd.setCursor(0, 0);
+        lcd.print(blankLine);
+        lcd.setCursor(0, 0);
+        lcd.write(ICON_SONG);
+        lcd.setCursor(2, 0);
+        lcd.print(cachedTitle);
+        log_i("Update title");
+    }
 
     // Artist
-    lcd.setCursor(0, 1);
-    lcd.write(ICON_ARTIST);
-    lcd.setCursor(2, 1);
-    memcpy(line, songInfo.songInfo.artist, 18);
-    lcd.print(line);
+    if (strncmp(cachedArtist, songInfo.songInfo.artist, 18) != 0)
+    {
+        memcpy(cachedArtist, songInfo.songInfo.artist, 18);
+        lcd.setCursor(0, 1);
+        lcd.print(blankLine);
+        lcd.setCursor(0, 1);
+        lcd.write(ICON_ARTIST);
+        lcd.setCursor(2, 1);
+        lcd.print(cachedArtist);
+        log_i("Update artist");
+    }
 
     // Album
-    lcd.setCursor(0, 2);
-    lcd.write(ICON_ALBUM);
-    lcd.setCursor(2, 2);
-    memcpy(line, songInfo.songInfo.album, 18);
-    lcd.print(line);
+    if (strncmp(cachedAlbum, songInfo.songInfo.album, 18) != 0)
+    {
+        memcpy(cachedAlbum, songInfo.songInfo.album, 18);
+        lcd.setCursor(0, 2);
+        lcd.print(blankLine);
+        lcd.setCursor(0, 2);
+        lcd.write(ICON_ALBUM);
+        lcd.setCursor(2, 2);
+        lcd.print(cachedAlbum);
+        log_i("Update album");
+    }
 
     // Song time
-    lcd.setCursor(0, 3);
-
     int currentMins = (playPosMS / 1000) / 60;
     int currentSecs = (playPosMS / 1000) % 60;
     int totalMins = (songInfo.songInfo.trackLengthMS / 1000) / 60;
@@ -445,8 +482,15 @@ void displayMusic()
         // timeLen: 11
         // pausedLen: 6
     }
-    lcd.print(fullLine);
-    // TODO: Take status into account (paused at least)
+    if (strncmp(cachedPlayTime, fullLine, 21) != 0)
+    {
+        memcpy(cachedPlayTime, fullLine, 21);
+        lcd.setCursor(0, 3);
+        lcd.print(blankLine);
+        lcd.setCursor(0, 3);
+        lcd.print(cachedPlayTime);
+        log_i("Update time");
+    }
 }
 
 void displayMessage(const char* firstLine, const char* secondLine, bool overflowSecondLine)
@@ -475,10 +519,10 @@ void printCentered(const char* text)
 
     char line[21] = { 0 };
     int len = strnlen(text, 20);
-    int center = 10 - len / 2;        // Divide will floor so this will always be right
-    memset(line, ' ', center);        // Spaces to pad
+    int center = 10 - len / 2;         // Divide will floor so this will always be right
+    memset(line, ' ', center);         // Spaces to pad
     memcpy(&line[center], text, len);  // Copy text
-    line[center + len] = 0;           // Null terminate
+    line[center + len] = 0;            // Null terminate
     lcd.print(line);
 }
 
@@ -522,7 +566,7 @@ void rotateLeft(Rotary& dial)
         selectedOption--;
         if (selectedOption < 0)
             selectedOption = numOptions - 1;
-            
+
         selectedOptionChanged();
     }
 }
@@ -567,7 +611,7 @@ void click(Button2& btn)
             break;
         case STATE_SPLASHSCREEN:
         case STATE_ERROR_NO_MESSAGES:
-        case STATE_CONNECTING: // TODO: Timeout timer in BTAudio when we try to connect
+        case STATE_CONNECTING:  // TODO: Timeout timer in BTAudio when we try to connect
             // States where you shouldn't be able to click
             break;
         case STATE_TRANSITION_MESSAGE:

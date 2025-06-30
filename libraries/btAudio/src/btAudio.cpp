@@ -301,9 +301,10 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                 if (avrcConnected)
                 {
                     log_i("AVRC connected");
-                    // Ask it to tell us when the time, track etc changes every 1000ms
-                    uint8_t attr_mask = ESP_AVRC_RN_PLAY_STATUS_CHANGE | ESP_AVRC_RN_TRACK_CHANGE | ESP_AVRC_RN_PLAY_POS_CHANGED;
-                    esp_avrc_ct_send_register_notification_cmd(1, attr_mask, 200);
+                    // Ask it to tell us when the time, track etc changes every 200ms
+                    esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
+                    esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_TRACK_CHANGE, 0);
+                    esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_PLAY_POS_CHANGED, 200);
                 }
                 break;
             }
@@ -352,6 +353,7 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                             esp_avrc_playback_stat_t playback = rc->change_ntf.event_parameter.playback;
                             if (playStatusChangedCallback)
                                 playStatusChangedCallback(playback);
+                            esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_PLAY_STATUS_CHANGE, 0);
                             /*
                     ESP_AVRC_PLAYBACK_STOPPED = 0
                     ESP_AVRC_PLAYBACK_PLAYING = 1
@@ -367,6 +369,7 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                             // rc->change_ntf.event_parameter.elm_id is a uint8_t[8], just a song ID used to get metadata
                             if (trackChangedCallback)
                                 trackChangedCallback();
+                            esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_TRACK_CHANGE, 0);
                             break;
                         }
                     case ESP_AVRC_RN_PLAY_POS_CHANGED:
@@ -377,6 +380,7 @@ void btAudio::avrc_callback(esp_avrc_ct_cb_event_t event, esp_avrc_ct_cb_param_t
                             currentTrackPosMS = playPosMS;
                             if (playPositionChangedCallback)
                                 playPositionChangedCallback(playPosMS);
+                            esp_avrc_ct_send_register_notification_cmd(1, ESP_AVRC_RN_PLAY_POS_CHANGED, 200);
                             break;
                         }
                 }
