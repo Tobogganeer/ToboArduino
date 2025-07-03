@@ -3,7 +3,7 @@
 #include "esp_timer.h"
 
 // Sets the name of the audio device
-btAudio audio = btAudio("Quandale Dingle's Whip");
+btAudio audio = btAudio("Daveikis Mobile");
 CarComms comms(handleCarData);
 
 esp_timer_handle_t refreshMetadataTimer;

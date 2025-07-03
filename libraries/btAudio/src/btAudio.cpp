@@ -174,6 +174,10 @@ void btAudio::connect(esp_bd_addr_t bda)
 void btAudio::disconnect()
 {
     esp_a2d_sink_disconnect(_address);
+    memset(deviceList.connected, 0, sizeof(esp_bd_addr_t));
+    saveDevices();
+
+    log_i("Disconnected");
 
     // Clear metadata
     title = "";

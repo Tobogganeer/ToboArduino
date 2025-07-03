@@ -81,6 +81,7 @@ BTInfoMsg devices;
 BTInfoMsg songInfo;
 BTInfoMsg connectedDisconnected;
 uint8_t playbackStatus;  // esp_avrc_playback_stat_t
+uint8_t previousDisplayedStatus;
 uint32_t playPosMS;
 
 Rotary dial;
@@ -90,6 +91,7 @@ int selectedOption;
 int numOptions;
 
 bool connected;
+int selectedDevice;
 
 char cachedTitle[19] = { 0 };
 char cachedArtist[19] = { 0 };
@@ -211,6 +213,7 @@ void switchStateWithIntermediate(State endState, State intermediateState, uint32
 void afterStateSwitched(State from, State to)
 {
     log_i("Switch from state %d to state %d", from, to);
+    selectedOption = 0;
 
     // Stuff like turn display back on from sleep
 
@@ -238,7 +241,7 @@ void afterStateSwitched(State from, State to)
             break;
         case STATE_DISCOVERABLE:
             setDiscoverable(true);  // Make visible to pairing
-            displayMessage("Bluetooth visible", "as 'Quandale's Whip'", false);
+            displayMessage("Bluetooth visible as", "\"Daveikis Mobile\"", false);
 
             // TODO: Disconnect when trying to pair, but if we leave and aren't connected, try reconnecting
             // TODO: Add packet/ability to start a reconnect from this end
@@ -262,6 +265,10 @@ void afterStateSwitched(State from, State to)
             memset(cachedArtist, 0, 19);
             memset(cachedAlbum, 0, 19);
             memset(cachedPlayTime, 0, 21);
+
+            // Icons seem to get corrupted eventually - re-init them here
+            initIcons();
+
             displayMusic();
             break;
     }
@@ -371,7 +378,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                         else if (isBDAValid(devices.devices.connected))
                         {
                             // We are connected
-                            connected(devices.devices.deviceNames[getDeviceIndex(&devices, devices.devices.connected)]);
+                            onConnected(devices.devices.deviceNames[getDeviceIndex(&devices, devices.devices.connected)]);
                         }
                     }
                     else if (state == STATE_RECONNECTING)
@@ -393,7 +400,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
             case BT_INFO_CONNECTED:
                 {
                     memcpy(&connectedDisconnected, msg, sizeof(BTInfoMsg));
-                    connected(connectedDisconnected.sourceDevice.deviceName);
+                    onConnected(connectedDisconnected.sourceDevice.deviceName);
 
                     // msg->sourceDevice.
                     // uint8_t address[6];
@@ -419,7 +426,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
     }
 }
 
-void connected(const char* deviceName)
+void onConnected(const char* deviceName)
 {
     switchStateWithIntermediate(STATE_DISPLAY, STATE_TRANSITION_MESSAGE, MESSAGE_CONNECT_TIME);
     displayMessage("Connected to", deviceName, true);
@@ -450,6 +457,15 @@ void displayMusic()
         return;
 
     //lcd.clear();
+
+    // Check if we just stopped
+    if (playbackStatus == PLAYBACK_STOPPED && previousDisplayedStatus != PLAYBACK_STOPPED)
+    {
+        previousDisplayedStatus = playbackStatus;
+        lcd.clear();
+        printCentered("NO SONG PLAYING", nullptr, false);
+        return;
+    }
 
     // Only write lines if they have changed
 
@@ -498,17 +514,10 @@ void displayMusic()
     char timeLine[19] = { 0 };
     sprintf(timeLine, "%d:%.2d", totalMins, totalSecs);
 
-    if (playbackStatus == PLAYBACK_STOPPED || playbackStatus == PLAYBACK_PAUSED)
+    if (playbackStatus == PLAYBACK_PAUSED)
     {
         // Add 'PAUSED' or 'STOPPED' to end of line
-        char pausedText[8];
-        const char* paused = " PAUSED";
-        const char* stopped = "STOPPED";
-
-        if (playbackStatus == PLAYBACK_PAUSED)
-            memcpy(pausedText, paused, 8);  // PAUSED if paused, STOPPED otherwise
-        else
-            memcpy(pausedText, stopped, 8);
+        const char* pausedText = "PAUSED";
         int pausedLen = strlen(pausedText);
         int timeLen = strlen(timeLine);
         memcpy(&timeLine[18 - pausedLen], pausedText, strlen(pausedText));
@@ -533,36 +542,44 @@ void displayMusic()
         lcd.setCursor(2, 3);
         lcd.print(cachedPlayTime);
     }
+
+    previousDisplayedStatus = playbackStatus;
 }
 
 void displayMessage(const char* firstLine, const char* secondLine, bool overflowSecondLine)
 {
     lcd.clear();
-    lcd.setCursor(0, 1);
-    printCentered(firstLine);
-    lcd.setCursor(0, 2);
-    if (overflowSecondLine)
+    if (fireLine)
     {
-        int len = strnlen(secondLine, 40);
-        if (len <= 20)
-            printCentered(secondLine);
-        else
-        {
-            // Split up line into two and print both
-            char half[21];
-            memcpy(half, secondLine, 20);
-            half[20] = 0;  // Null-terminate
-            printCentered(half);
-
-            // Print other half
-            lcd.setCursor(0, 3);
-            memcpy(half, &secondLine[20], 20);
-            printCentered(half);
-        }
-        //lcd.print(secondLine);  // Don't print centered so it can wrap around
+        lcd.setCursor(0, 1);
+        printCentered(firstLine);
     }
-    else
-        printCentered(secondLine);
+    if (secondLine)
+    {
+        lcd.setCursor(0, 2);
+        if (overflowSecondLine)
+        {
+            int len = strnlen(secondLine, 40);
+            if (len <= 20)
+                printCentered(secondLine);
+            else
+            {
+                // Split up line into two and print both
+                char half[21];
+                memcpy(half, secondLine, 20);
+                half[20] = 0;  // Null-terminate
+                printCentered(half);
+
+                // Print other half
+                lcd.setCursor(0, 3);
+                memcpy(half, &secondLine[20], 20);
+                printCentered(half);
+            }
+            //lcd.print(secondLine);  // Don't print centered so it can wrap around
+        }
+        else
+            printCentered(secondLine);
+    }
 }
 
 void printCentered(const char* text)
@@ -736,6 +753,17 @@ Go back
 
 void deviceList_click()
 {
+    switch (selectedOption)
+    {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+            break;
+        case 5:  // Go back
+            switchStateInstant(STATE_SETTINGS_MAIN);
+    }
 }
 
 void deviceListSettings_display()
@@ -769,11 +797,11 @@ void deviceListSettings_display()
                 if (i == 0)
                     lcd.write(ICON_FAVOURITE);
                 // Write first couple of characters from device name
-                char line[19]; // 18 chars + null
+                char line[19];  // 18 chars + null
                 memcpy(line, devices.devices.deviceNames[i], 18);
                 line[18] = 0;
 
-                lcd.write(line);
+                lcd.print(line);
             }
             else
             {
@@ -793,16 +821,16 @@ void deviceListSettings_display()
         for (int i = 0; i < 2; i++)
         {
             lcd.setCursor(1, i + 1);
-            int deviceIndex = i + 3; // We already printed 3 on the first page
+            int deviceIndex = i + 3;  // We already printed 3 on the first page
             // Check if device exists
             if (deviceIndex < numDevices)
             {
                 // Write first couple of characters from device name
-                char line[19]; // 18 chars + null
+                char line[19];  // 18 chars + null
                 memcpy(line, devices.devices.deviceNames[deviceIndex], 18);
                 line[18] = 0;
 
-                lcd.write(line);
+                lcd.print(line);
             }
             else
             {
@@ -821,6 +849,14 @@ void deviceListSettings_display()
 
 void device_click()
 {
+    /*
+    SETTINGS_DEVICE_CONNECT 0
+    SETTINGS_DEVICE_FAVOURITE 1
+    SETTINGS_DEVICE_DELETE 2
+    SETTINGS_DEVICE_MOVE_UP 3
+    SETTINGS_DEVICE_MOVE_DOWN 4
+    SETTINGS_DEVICE_GO_BACK 5
+    */
 }
 
 void deviceSettings_display()
@@ -839,16 +875,29 @@ void deviceSettings_display()
 
     lcd.clear();
 
+    // Make sure device is valid
+    if (selectedDevice >= devices.devices.count)
+    {
+        log_e("selectedDevice was >= devices.devices.count (selected a device that doesn't exist)!");
+        switchStateInstant(STATE_SETTINGS_MAIN);
+        return;
+    }
+
     // Page 1
     if (selectedOption < 3)
     {
-        // TODO: Check if device is connected or not
         lcd.setCursor(1, 0);
-        lcd.print("Connect/Disconnect");
+        // Check if connected
+        if (memcmp(devices.devices.addresses[selectedDevice], devices.devices.connected, 6) == 0)
+            lcd.print("Disconnect");
+        else
+            lcd.print("Connect");
 
-        // TODO: Check if device is favourite
         lcd.setCursor(1, 1);
-        lcd.print("Favourite");
+        if (!devices.devices.favourite == selectedDevice)
+            lcd.print("Favourite");
+        else
+            lcd.print("<already favourited>");
 
         lcd.setCursor(1, 2);
         lcd.print("Delete");
@@ -863,10 +912,19 @@ void deviceSettings_display()
         lcd.print("^^^");
 
         lcd.setCursor(1, 1);
-        lcd.print("Move up");
+        // TODO: Favourite device if at index 1
+        if (selectedDevice > 0)
+            lcd.print("Move up");
+        else
+            lcd.print("<already at top>");
 
         lcd.setCursor(1, 2);
-        lcd.print("Move down");
+        if (selectedDevice == 0)
+            lcd.print("<cannot move fav.>");
+        else if (selectedDevice == 4)
+            lcd.print("<already at bottom>");
+        else
+            lcd.print("Move down");
 
         lcd.setCursor(1, 3);
         lcd.print("Go back");
@@ -879,6 +937,39 @@ void deviceSettings_display()
 
 void mainSettings_click()
 {
+    /*
+    SETTINGS_MAIN_DEVICE_LIST 0
+    SETTINGS_MAIN_PAIR_DEVICE 1
+    SETTINGS_MAIN_DISCONNECT 2
+    SETTINGS_MAIN_GO_BACK 3
+    */
+
+    switch (selectedOption)
+    {
+        case SETTINGS_MAIN_DEVICE_LIST:
+            switchStateInstant(STATE_SETTINGS_DEVICE_LIST);
+            break;
+        case SETTINGS_MAIN_PAIR_DEVICE:
+            // Pair if we have room
+            if (devices.devices.count < 5)
+            {
+                disconnect();
+                switchStateInstant(STATE_DISCOVERABLE);
+            }
+            break;
+        case SETTINGS_MAIN_DISCONNECT:
+            if (connected)
+            {
+                // TODO: See if this activates the "disconnected" callback or not
+                disconnect();
+                switchStateWithIntermediate(STATE_SETTINGS_MAIN, STATE_TRANSITION_MESSAGE, 1000);
+                displayMessage("Disconnected", nullptr, false);
+            }
+            break;
+        case SETTINGS_MAIN_GO_BACK:
+            switchStateInstant(connected ? STATE_DISPLAY : STATE_IDLE);
+            break;
+    }
 }
 
 void mainSettings_display()
@@ -925,15 +1016,64 @@ void drawCursorForSelectedOption()
     6
     */
     int selectedOnThisPage = selectedOption;
-    if (numOptions == 6 && selectionOption > 2)
+    if (numOptions == 6 && selectedOption > 2)
         selectedOnThisPage = selectedOption % 3 + 1;
-    
+
     // Print the cursor (or blank) on each line
     for (int i = 0; i < 4; i++)
     {
         lcd.setCursor(0, i);
         lcd.print(selectedOnThisPage == i ? '>' : ' ');
     }
+}
+
+void connect(uint8_t* device)
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_CONNECT;
+    memcpy(msg.device, device, 6);
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+}
+
+void favourite(uint8_t* device)
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_FAVOURITE;
+    memcpy(msg.device, device, 6);
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+}
+
+void moveUp(uint8_t* device)
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_MOVE_UP;
+    memcpy(msg.device, device, 6);
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+}
+
+void moveDown(uint8_t* device)
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_MOVE_DOWN;
+    memcpy(msg.device, device, 6);
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+}
+
+void deleteDevice(uint8_t* device)
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_DELETE;
+    memcpy(msg.device, device, 6);
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+}
+
+void disconnect()
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_DISCONNECT;
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+
+    connected = false;
 }
 
 void setDiscoverable(bool discoverable)
