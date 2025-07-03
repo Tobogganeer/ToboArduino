@@ -33,10 +33,13 @@ Preferences preferences;
 
 #define RECONNECT_TIMEOUT_MS 5000
 
+#define CONNECT_TIMEOUT_MS 5000
+
 PairedDevices deviceList = { 0 };
 int reconnectIndex = 0;
 bool btAudio::reconnecting = false;
 esp_timer_handle_t reconnectTimer;
+esp_timer_handle_t connectTimer;
 
 uint8_t btAudio::tl = 0;
 
@@ -59,6 +62,12 @@ btAudio::btAudio(const char *devName)
         .name = "reconnectTimer"
     };
     esp_timer_create(&timerArgs, &reconnectTimer);
+
+    esp_timer_create_args_t connectTimerArgs = {
+        .callback = &connectTimeoutCB,
+        .name = "connectTimer"
+    };
+    esp_timer_create(&connectTimerArgs, &connectTimer);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -134,9 +143,15 @@ void btAudio::tryReconnectNextDevice()
 
 void btAudio::reconnectTimeoutCB(void *arg)
 {
-    log_w("Reconnect attempt timed out for device #%d", reconnectIndex);
+    log_i("Reconnect attempt timed out for device #%d", reconnectIndex);
     reconnectIndex++;
     tryReconnectNextDevice();
+}
+
+void btAudio::connectTimeoutCB(void* arg)
+{
+    log_i("Connect attempt timed out");
+    disconnectedCallback(connectingAddress, nullptr, 0);
 }
 
 void btAudio::reconnect()
@@ -164,15 +179,24 @@ void btAudio::connect(esp_bd_addr_t bda)
 {
     // Stop trying our device list if we manually try to connect
     esp_timer_stop(reconnectTimer);
+    esp_timer_stop(connectTimer);
     reconnecting = false;
 
     memcpy(_address, bda, sizeof(esp_bd_addr_t));
+    memcpy(connectingAddress, bda, sizeof(esp_bd_addr_t));
 
     esp_a2d_sink_connect(_address);
+
+    esp_timer_stop(connectTimer);
+    esp_timer_start_once(connectTimer, CONNECT_TIMEOUT_MS * 1000);
 }
 
 void btAudio::disconnect()
 {
+    esp_timer_stop(reconnectTimer);
+    esp_timer_stop(connectTimer);
+    reconnecting = false;
+
     esp_a2d_sink_disconnect(_address);
     memset(deviceList.connected, 0, sizeof(esp_bd_addr_t));
     saveDevices();
@@ -225,15 +249,16 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                         if (deviceList.count == 0)
                             loadDevices(&deviceList);
 
-                        bool currentDeviceDisconnected = memcmp(_address, deviceList.connected, sizeof(esp_bd_addr_t)) == 0;
+                        bool currentDeviceDisconnected = memcmp(a2d->conn_stat.remote_bda, deviceList.connected, sizeof(esp_bd_addr_t)) == 0;
                         if (currentDeviceDisconnected)
                         {
                             memset(deviceList.connected, 0, sizeof(esp_bd_addr_t));
                             saveDevices(&deviceList);
-                            uint8_t index = getDeviceIndex(&deviceList, _address);
-                            if (index != 255);
-                                disconnectedCallback(_address, deviceList.deviceNames[index], MAX_DEVICE_NAME_LENGTH);
                         }
+
+                        uint8_t index = getDeviceIndex(&deviceList, a2d->conn_stat.remote_bda);
+                        if (index != 255);
+                            disconnectedCallback(a2d->conn_stat.remote_bda, deviceList.deviceNames[index], MAX_DEVICE_NAME_LENGTH);
                     }
 
                     if (reconnecting)
