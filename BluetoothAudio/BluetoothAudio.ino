@@ -113,7 +113,8 @@ void disconnectedCallback(const esp_bd_addr_t bda, const char* deviceName, int n
     BTInfoMsg msg;
     msg.type = BTInfoType::BT_INFO_DISCONNECTED;
     memcpy(&msg.sourceDevice.address, &bda, sizeof(esp_bd_addr_t));
-    memcpy(&msg.sourceDevice.deviceName, deviceName, min(nameLen, 32));
+    if (deviceName)
+        memcpy(&msg.sourceDevice.deviceName, deviceName, min(nameLen, 32));
     msg.sourceDevice.deviceName[31] = 0; // Null-terminate last character (name limit is 32 chars);
     comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
 }

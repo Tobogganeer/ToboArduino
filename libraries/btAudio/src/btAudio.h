@@ -83,6 +83,8 @@ class btAudio
     static void tryReconnectNextDevice();
     static void reconnectTimeoutCB(void*);
 
+    static void connectTimeoutCB(void*);
+
     // static function causes a static infection of variables
     static void i2sCallback(const uint8_t *data, uint32_t len);
     static void a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param);
@@ -92,9 +94,11 @@ class btAudio
     static void swapDevices(PairedDevices* devices, uint8_t a, uint8_t b);
 
     // bluetooth address of connected device
-    static uint8_t _address[6];
+    static esp_bd_addr_t _address;
     static float _vol;
     static bool reconnecting;
+
+    static esp_bd_addr_t connectingAddress;
 
     static uint8_t tl;
     static uint8_t nextTL();

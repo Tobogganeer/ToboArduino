@@ -368,25 +368,37 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
             case BT_INFO_DEVICES:
                 {
                     // Store devices
+                    bool devicesChanged = memcmp(&devices, msg, sizeof(BTInfoMsg)) != 0;
                     memcpy(&devices, msg, sizeof(BTInfoMsg));
-                    if (state == STATE_SPLASHSCREEN)
+                    switch (state)
                     {
-                        if (devices.devices.count == 0)
-                            switchStateInstant(STATE_IDLE);
-                        else if (devices.devices.reconnecting)
-                            switchStateInstant(STATE_RECONNECTING);
-                        else if (isBDAValid(devices.devices.connected))
-                        {
-                            // We are connected
-                            onConnected(devices.devices.deviceNames[getDeviceIndex(&devices, devices.devices.connected)]);
-                        }
+                        case STATE_SPLASHSCREEN:
+                            {
+                                if (devices.devices.count == 0)
+                                    switchStateInstant(STATE_IDLE);
+                                else if (devices.devices.reconnecting)
+                                    switchStateInstant(STATE_RECONNECTING);
+                                else if (isBDAValid(devices.devices.connected))
+                                {
+                                    // We are connected
+                                    onConnected(devices.devices.deviceNames[getDeviceIndex(&devices, devices.devices.connected)]);
+                                }
+                                break;
+                            }
+                        case STATE_RECONNECTING:
+                            {
+                                // If we've stopped reconnecting, we weren't successful
+                                if (devices.devices.reconnecting == false)
+                                    switchStateInstant(STATE_IDLE);
+                                break;
+                            }
+                        case STATE_SETTINGS_MAIN:
+                        case STATE_SETTINGS_DEVICE_LIST:
+                        case STATE_SETTINGS_DEVICE:
+                            if (devicesChanged)
+                                selectedOptionChanged();  // Re-display settings
                     }
-                    else if (state == STATE_RECONNECTING)
-                    {
-                        // If we've stopped reconnecting, we weren't successful
-                        if (devices.devices.reconnecting == false)
-                            switchStateInstant(STATE_IDLE);
-                    }
+
 
                     // msg->devices.
                     // uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
@@ -416,7 +428,15 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                         switchStateWithIntermediate(STATE_IDLE, STATE_TRANSITION_MESSAGE, MESSAGE_DISCONNECT_TIME);
                         displayMessage("Disconnected from", connectedDisconnected.sourceDevice.deviceName, true);
                     }
-                    connected = false;
+                    else if (state == STATE_CONNECTING)
+                    {
+                        switchStateWithIntermediate(STATE_SETTINGS_DEVICE, STATE_TRANSITION_MESSAGE, 2000);
+                        displayMessage("Connect failed");
+                    }
+
+                    // If we are trying to connect to a different device, we might still be connected
+                    if (state != STATE_CONNECTING)
+                        connected = false;
                     // msg->sourceDevice.
                     // uint8_t address[6];
                     // char deviceName[32];
@@ -463,7 +483,7 @@ void displayMusic()
     {
         previousDisplayedStatus = playbackStatus;
         lcd.clear();
-        printCentered("NO SONG PLAYING", nullptr, false);
+        printMessage("NO SONG PLAYING");
         return;
     }
 
@@ -549,7 +569,7 @@ void displayMusic()
 void displayMessage(const char* firstLine, const char* secondLine, bool overflowSecondLine)
 {
     lcd.clear();
-    if (fireLine)
+    if (firstLine)
     {
         lcd.setCursor(0, 1);
         printCentered(firstLine);
@@ -580,6 +600,11 @@ void displayMessage(const char* firstLine, const char* secondLine, bool overflow
         else
             printCentered(secondLine);
     }
+}
+
+void displayMessage(const char* firstLine)
+{
+    displayMessage(firstLine, nullptr, false);
 }
 
 void printCentered(const char* text)
@@ -699,7 +724,10 @@ void click(Button2& btn)
             break;
         case STATE_SPLASHSCREEN:
         case STATE_ERROR_NO_MESSAGES:
-        case STATE_CONNECTING:  // TODO: Timeout timer in BTAudio when we try to connect
+        case STATE_CONNECTING:
+            // BTAudio will tell us if we've timed out (disconnect() callback)
+            // Let us go back anyways just to avoid softlocks if BTAudio cacks out
+            switchStateInstant(STATE_SETTINGS_DEVICE_LIST);
             // States where you shouldn't be able to click
             break;
         case STATE_TRANSITION_MESSAGE:
@@ -760,6 +788,11 @@ void deviceList_click()
         case 2:
         case 3:
         case 4:
+            if (selectedOption < devices.devices.count)
+            {
+                selectedDevice = selectedOption;
+                switchStateInstant(STATE_SETTINGS_DEVICE);
+            }
             break;
         case 5:  // Go back
             switchStateInstant(STATE_SETTINGS_MAIN);
@@ -857,6 +890,82 @@ void device_click()
     SETTINGS_DEVICE_MOVE_DOWN 4
     SETTINGS_DEVICE_GO_BACK 5
     */
+
+    switch (selectedOption)
+    {
+        case SETTINGS_DEVICE_CONNECT:  // Actually connect/disconnect
+            // Check if connected
+            if (memcmp(devices.devices.addresses[selectedDevice], devices.devices.connected, 6) == 0)
+            {
+                disconnect();
+                switchStateWithIntermediate(STATE_SETTINGS_DEVICE, STATE_TRANSITION_MESSAGE, 1000);
+                displayMessage("Disconnected", nullptr, false);
+            }
+            else
+            {
+                connect(devices.devices.addresses[selectedDevice]);
+                switchStateInstant(STATE_CONNECTING);
+                displayMessage("Connecting to", devices.devices.deviceNames[selectedDevice], true);
+            }
+            break;
+        case SETTINGS_DEVICE_FAVOURITE:
+            if (!devices.devices.favourite == selectedDevice)
+            {
+                favourite(devices.devices.addresses[selectedDevice]);
+                switchStateWithIntermediate(STATE_SETTINGS_DEVICE, STATE_TRANSITION_MESSAGE, 1000);
+                displayMessage("Favourited", devices.devices.deviceNames[selectedDevice], true);
+            }
+            break;
+        case SETTINGS_DEVICE_DELETE:
+            {
+                // If connected, disconnect first
+                if (memcmp(devices.devices.addresses[selectedDevice], devices.devices.connected, 6) == 0)
+                    disconnect();
+
+                deleteDevice(devices.devices.addresses[selectedDevice]);
+
+                // Go back to main page if this is the last device
+                State next = devices.devices.count == 1 ? STATE_SETTINGS_MAIN : STATE_SETTINGS_DEVICE_LIST;
+                switchStateWithIntermediate(next, STATE_TRANSITION_MESSAGE, 1500);
+                displayMessage("Deleted", devices.devices.deviceNames[selectedDevice], true);
+                break;
+            }
+        case SETTINGS_DEVICE_MOVE_UP:
+            {
+                // Don't move favourite/top device
+                if (selectedDevice == 0)
+                    break;
+
+                // Favourite this device if we are at position #2
+                if (selectedDevice == 1)
+                    favourite(devices.devices.addresses[selectedDevice]);
+                else
+                    moveUp(devices.devices.addresses[selectedDevice]);
+                selectedDevice--;
+                switchStateWithIntermediate(STATE_SETTINGS_DEVICE, STATE_TRANSITION_MESSAGE, 1000);
+                char message[21];
+                sprintf(message, "Moved to pos. %d", selectedDevice + 1);
+                displayMessage(message);
+                break;
+            }
+        case SETTINGS_DEVICE_MOVE_DOWN:
+            {
+                // Don't move favourite or bottom device
+                if (selectedDevice == 0 || selectedDevice == 4)
+                    break;
+
+                moveDown(devices.devices.addresses[selectedDevice]);
+                selectedDevice++;
+                switchStateWithIntermediate(STATE_SETTINGS_DEVICE, STATE_TRANSITION_MESSAGE, 1000);
+                char message[21];
+                sprintf(message, "Moved to pos. %d", selectedDevice + 1);
+                displayMessage(message);
+                break;
+            }
+        case SETTINGS_DEVICE_GO_BACK:
+            switchStateInstant(STATE_SETTINGS_DEVICE_LIST);
+            break;
+    }
 }
 
 void deviceSettings_display()
@@ -947,7 +1056,8 @@ void mainSettings_click()
     switch (selectedOption)
     {
         case SETTINGS_MAIN_DEVICE_LIST:
-            switchStateInstant(STATE_SETTINGS_DEVICE_LIST);
+            if (devices.devices.count > 0)
+                switchStateInstant(STATE_SETTINGS_DEVICE_LIST);
             break;
         case SETTINGS_MAIN_PAIR_DEVICE:
             // Pair if we have room
@@ -982,12 +1092,20 @@ void mainSettings_display()
     */
     lcd.clear();
     lcd.setCursor(1, 0);  // Leave room for little > display
-    lcd.print("Device List");
+    if (devices.devices.count > 0)
+    {
+        lcd.print("Device List (");
+        lcd.print(devices.devices.count);
+        lcd.print("/5)");
+    }
+    else
+        lcd.print("<no past devices>");
 
     lcd.setCursor(1, 1);
-    lcd.print("Pair Device (");
-    lcd.print(devices.devices.count);
-    lcd.print("/5)");
+    if (devices.devices.count == 5)
+        lcd.print("<can't pair >5 >");
+    else
+        lcd.print("Pair New Device");
 
     lcd.setCursor(1, 2);
     if (connected)
@@ -1074,6 +1192,7 @@ void disconnect()
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 
     connected = false;
+    memset(devices.devices.connected, 0, 6);
 }
 
 void setDiscoverable(bool discoverable)
