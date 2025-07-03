@@ -81,7 +81,7 @@ BTInfoMsg devices;
 BTInfoMsg songInfo;
 BTInfoMsg connectedDisconnected;
 uint8_t playbackStatus;  // esp_avrc_playback_stat_t
-uint8_t previousDisplayedStatus;
+uint8_t previousDisplayedStatus = 255;
 uint32_t playPosMS;
 
 Rotary dial;
@@ -336,7 +336,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                         case BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE:
                             // msg->songUpdate.
                             // uint8_t playback; // esp_avrc_playback_stat_t
-                            log_i("PlaybacK: %d", msg->songUpdate.playback);
+                            log_i("Playback: %d", msg->songUpdate.playback);
                             playbackStatus = msg->songUpdate.playback;
                             displayMusic();
                             break;
@@ -442,7 +442,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                     // If we are trying to connect to a different device, we might still be connected
                     if (state != STATE_CONNECTING)
                         memset(devices.devices.connected, 0, 6);
-                        //connected = false;
+                    //connected = false;
                     // msg->sourceDevice.
                     // uint8_t address[6];
                     // char deviceName[32];
@@ -485,11 +485,15 @@ void displayMusic()
     //lcd.clear();
 
     // Check if we just stopped
-    if (playbackStatus == PLAYBACK_STOPPED && previousDisplayedStatus != PLAYBACK_STOPPED)
+    if (playbackStatus == PLAYBACK_STOPPED)
     {
-        previousDisplayedStatus = playbackStatus;
-        lcd.clear();
-        printCentered("NO SONG PLAYING");
+        if (previousDisplayedStatus != PLAYBACK_STOPPED)
+        {
+            previousDisplayedStatus = playbackStatus;
+            lcd.clear();
+            lcd.setCursor(0, 1);
+            printCentered("NO SONG PLAYING");
+        }
         return;
     }
 

@@ -153,7 +153,8 @@ void btAudio::reconnectTimeoutCB(void *arg)
 void btAudio::connectTimeoutCB(void* arg)
 {
     log_i("Connect attempt timed out");
-    disconnectedCallback(connectingAddress, nullptr, 0);
+    if (disconnectedCallback != nullptr)
+        disconnectedCallback(connectingAddress, nullptr, 0);
 }
 
 void btAudio::reconnect()
@@ -180,6 +181,7 @@ void btAudio::reconnect()
 void btAudio::connect(esp_bd_addr_t bda)
 {
     // Stop trying our device list if we manually try to connect
+    log_i("Attempting connect");
     esp_timer_stop(reconnectTimer);
     esp_timer_stop(connectTimer);
     reconnecting = false;
@@ -227,6 +229,7 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                 {
                     // Stop reconnect timeout timer
                     esp_timer_stop(reconnectTimer);
+                    esp_timer_stop(connectTimer);
                     reconnecting = false;
 
                     ESP_LOGI("btAudio", "Connected to BT device: %d %d %d %d %d %d", _address[0], _address[1], _address[2], _address[3], _address[4], _address[5]);
@@ -246,6 +249,8 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                 }
                 else if (a2d->conn_stat.state == ESP_A2D_CONNECTION_STATE_DISCONNECTED)
                 {
+                    esp_timer_stop(connectTimer);
+
                     if (disconnectedCallback != nullptr)
                     {
                         if (deviceList.count == 0)
