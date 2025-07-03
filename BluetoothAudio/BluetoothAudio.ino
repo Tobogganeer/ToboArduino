@@ -9,6 +9,8 @@ CarComms comms(handleCarData);
 esp_timer_handle_t refreshMetadataTimer;
 esp_timer_handle_t sendDeviceInfoTimer;
 
+uint8_t playStatus;
+
 #define METADATA_REFRESH_TIME_MS 3000 // Also refreshed when track changes
 #define SEND_DEVICE_INFO_TIME_MS 5000
 
@@ -136,6 +138,7 @@ void metadataUpdatedCallback()
     copyMetadataString((uint8_t*)&msg.songInfo.artist, audio.artist);
     copyMetadataString((uint8_t*)&msg.songInfo.album, audio.album);
     msg.songInfo.trackLengthMS = audio.totalTrackDurationMS;
+    msg.songInfo.playStatus = playStatus;
 
     comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
 }
@@ -150,6 +153,7 @@ void playStatusChangedCallback(esp_avrc_playback_stat_t status)
     bool sent = comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
     log_i("Sent play status: %d", sent);
 
+    playStatus = status;
 
     refreshMetadata(nullptr); // Refresh meta when playback changes
 }

@@ -103,6 +103,7 @@ typedef struct BTInfoMsg {
 			char artist[BT_SONG_INFO_MAX_STR_LEN]; // 128
 			char album[BT_SONG_INFO_MAX_STR_LEN]; // 192
 			uint32_t trackLengthMS; // 196
+			uint8_t playStatus; // 197
 		} songInfo;
 		struct {
 			// Extracting constants from btAduio.h

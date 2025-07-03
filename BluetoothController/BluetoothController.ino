@@ -90,7 +90,6 @@ Button2 dialButton;
 int selectedOption;
 int numOptions;
 
-bool connected;
 int selectedDevice;
 
 char cachedTitle[19] = { 0 };
@@ -286,6 +285,11 @@ bool isBDAValid(uint8_t* bda)
     return !(bda[0] == 0 && bda[1] == 0 && bda[2] == 0 && bda[3] == 0 && bda[4] == 0 && bda[5] == 0);
 }
 
+bool isConnected()
+{
+    return isBDAValid(devices.devices.connected);
+}
+
 uint8_t getDeviceIndex(const BTInfoMsg* devices, uint8_t* bda)
 {
     if (!devices || devices->devices.count == 0 || !bda)
@@ -357,6 +361,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                 {
                     // Store song info
                     memcpy(&songInfo, msg, sizeof(BTInfoMsg));
+                    playbackStatus = songInfo.songInfo.playStatus;
                     displayMusic();
                     // msg->songInfo.
                     // char title[BT_SONG_INFO_MAX_STR_LEN]; // 64 bytes
@@ -436,7 +441,8 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
 
                     // If we are trying to connect to a different device, we might still be connected
                     if (state != STATE_CONNECTING)
-                        connected = false;
+                        memset(devices.devices.connected, 0, 6);
+                        //connected = false;
                     // msg->sourceDevice.
                     // uint8_t address[6];
                     // char deviceName[32];
@@ -450,7 +456,7 @@ void onConnected(const char* deviceName)
 {
     switchStateWithIntermediate(STATE_DISPLAY, STATE_TRANSITION_MESSAGE, MESSAGE_CONNECT_TIME);
     displayMessage("Connected to", deviceName, true);
-    connected = true;
+    //connected = true;
 }
 
 
@@ -483,7 +489,7 @@ void displayMusic()
     {
         previousDisplayedStatus = playbackStatus;
         lcd.clear();
-        printMessage("NO SONG PLAYING");
+        printCentered("NO SONG PLAYING");
         return;
     }
 
@@ -1006,7 +1012,7 @@ void deviceSettings_display()
         if (!devices.devices.favourite == selectedDevice)
             lcd.print("Favourite");
         else
-            lcd.print("<already favourited>");
+            lcd.print("<already favourite>");
 
         lcd.setCursor(1, 2);
         lcd.print("Delete");
@@ -1068,7 +1074,7 @@ void mainSettings_click()
             }
             break;
         case SETTINGS_MAIN_DISCONNECT:
-            if (connected)
+            if (isBDAValid(devices.devices.connected))
             {
                 // TODO: See if this activates the "disconnected" callback or not
                 disconnect();
@@ -1077,7 +1083,7 @@ void mainSettings_click()
             }
             break;
         case SETTINGS_MAIN_GO_BACK:
-            switchStateInstant(connected ? STATE_DISPLAY : STATE_IDLE);
+            switchStateInstant(isBDAValid(devices.devices.connected) ? STATE_DISPLAY : STATE_IDLE);
             break;
     }
 }
@@ -1108,7 +1114,7 @@ void mainSettings_display()
         lcd.print("Pair New Device");
 
     lcd.setCursor(1, 2);
-    if (connected)
+    if (isBDAValid(devices.devices.connected))
         lcd.print("Disconnect");
     else
         lcd.print("<not connected>");
@@ -1191,7 +1197,7 @@ void disconnect()
     msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_DISCONNECT;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 
-    connected = false;
+    //connected = false;
     memset(devices.devices.connected, 0, 6);
 }
 

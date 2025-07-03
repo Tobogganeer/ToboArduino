@@ -8,6 +8,8 @@ float btAudio::_vol = 0.95;
 esp_bd_addr_t btAudio::_address;
 int32_t btAudio::_sampleRate = 44100;
 
+esp_bd_addr_t btAudio::connectingAddress;
+
 String btAudio::title = "";
 String btAudio::album = "";
 String btAudio::artist = "";
