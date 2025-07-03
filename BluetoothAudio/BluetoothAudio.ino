@@ -27,9 +27,6 @@ void setup()
     audio.begin();
     audio.setDiscoverable(false); // Set non-discoverable by default - user will go into settings and pair new device
 
-    // Tries reconnecting to last 5 connected devices
-    audio.reconnect();
-
     int ws = 16;
     int dout = 17;
     int bck = 5;
@@ -62,14 +59,22 @@ void setup()
     audio.playStatusChangedCallback = playStatusChangedCallback;
     audio.trackChangedCallback = trackChangedCallback;
     audio.playPositionChangedCallback = playPositionChangedCallback;
+
+    // Give things a bit to initialize
+    delay(500);
+
+    // Tries reconnecting to last 5 connected devices
+    audio.reconnect();
 }
 
 void refreshMetadata(void* arg)
 {
     // It will give us the metadataUpdatedCallback when complete
-    log_i("Refresh metadata. AVRC %s", audio.avrcConnected ? "connected" : "not connected");
     if (audio.avrcConnected)
+    {
         audio.updateMeta();
+        log_v("Refresh metadata");
+    }
 }
 
 void sendDeviceInfo(void* arg)
