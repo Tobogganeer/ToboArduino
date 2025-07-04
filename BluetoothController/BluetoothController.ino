@@ -8,7 +8,6 @@ This board will communicate via ESP-NOW and drive the display/settings
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <CarComms.h>
-#include "esp_timer.h"
 #include "Rotary.h"
 #include "Button2.h"
 
@@ -25,7 +24,13 @@ CarComms comms(handleCarData);
 #define PLAYBACK_REV_SEEK 4
 #define PLAYBACK_ERROR 0xFF
 
-#define DEBUG
+//#define DEBUG
+
+#ifndef DEBUG
+#define log_i(...) {}
+#define log_w(...) {}
+#define log_e(...) {}
+#endif
 
 typedef uint8_t State;
 
@@ -52,9 +57,9 @@ enum : uint8_t
 #define MESSAGE_CONNECT_TIME 2000
 
 // TODO: Change these once it's actually connected
-#define ROTARY_PIN1 13
-#define ROTARY_PIN2 12
-#define ROTARY_BUTTON 26
+#define ROTARY_PIN1 D3
+#define ROTARY_PIN2 D4
+#define ROTARY_BUTTON D5
 
 #define CLICKS_PER_ROTATION 4  // The encoder outputs 4 times when rotated once
 
@@ -73,7 +78,7 @@ enum : uint8_t
 
 State state;
 State nextState;
-esp_timer_handle_t stateSwitchTimer;
+long stateSwitchTimeMS;
 bool switchingState;
 long lastStateSwitchTimeMS;
 
@@ -123,12 +128,6 @@ void setup()
     comms.begin();
     comms.receiveTypeMask = CarDataType::ID_BT_TRACK_UPDATE | CarDataType::ID_BT_INFO;
 
-    esp_timer_create_args_t timerArgs = {
-        .callback = &stateTimerCB,
-        .name = "stateSwitchTimer"
-    };
-    esp_timer_create(&timerArgs, &stateSwitchTimer);
-
     memset(blankLine, ' ', 20);  // Set first 20 chars to spaces
 }
 
@@ -161,6 +160,17 @@ void loop()
             }
             break;
     }
+
+    // Check if we are waiting for a state switch
+    if (stateSwitchTimeMS != 0)
+    {   
+        // We set stateSwitchTimeMS to millis() + delay, so if it is less than current time it has elapsed
+        if (stateSwitchTimeMS < millis())
+        {
+            stateSwitchTimeMS = 0;
+            stateTimerCB(nullptr);
+        }
+    }
 }
 
 void checkError()
@@ -187,7 +197,7 @@ void switchStateInstant(State endState)
 {
     State previous = state;
 
-    esp_timer_stop(stateSwitchTimer);
+    stateSwitchTimeMS = 0;
     switchingState = false;  // TODO: Maybe move this to stateTimerCB and return from the fn if switchingState?
     state = endState;
     lastStateSwitchTimeMS = millis();
@@ -200,8 +210,9 @@ void switchStateWithIntermediate(State endState, State intermediateState, uint32
     switchingState = true;
     State previous = state;
 
-    esp_timer_stop(stateSwitchTimer);                                          // Stop before (re)starting
-    esp_timer_start_once(stateSwitchTimer, timeInIntermediateStateMS * 1000);  // Convert to us from ms
+    //esp_timer_stop(stateSwitchTimer);                                          // Stop before (re)starting
+    //esp_timer_start_once(stateSwitchTimer, timeInIntermediateStateMS * 1000);  // Convert to us from ms
+    stateSwitchTimeMS = millis() + timeInIntermediateStateMS;
     nextState = endState;
     state = intermediateState;
     lastStateSwitchTimeMS = millis();
@@ -263,7 +274,7 @@ void afterStateSwitched(State from, State to)
             memset(cachedTitle, 0, 19);
             memset(cachedArtist, 0, 19);
             memset(cachedAlbum, 0, 19);
-            memset(cachedPlayTime, 0, 21);
+            memset(cachedPlayTime, 0, 19);
 
             // Icons seem to get corrupted eventually - re-init them here
             initIcons();
