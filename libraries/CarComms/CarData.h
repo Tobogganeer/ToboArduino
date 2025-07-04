@@ -11,6 +11,7 @@ typedef enum : uint8_t {
 	ID_OEM_DISPLAY 		= 1 << 4,
 	ID_REVERSEPROXIMITY = 1 << 5,
 	ID_BUZZER			= 1 << 6,
+	ID_AUDIO_SOURCE		= 1 << 7,
 } CarDataType;
 // Update the receiveTimes array in CarComms if any are added/removed
 
@@ -165,5 +166,9 @@ typedef struct BuzzerMsg {
 	uint32_t frequency2;
 	uint16_t duration;
 } BuzzerMsg;
+
+typedef struct AudioSourceMsg {
+	uint8_t audioSource;
+}
 
 #endif
