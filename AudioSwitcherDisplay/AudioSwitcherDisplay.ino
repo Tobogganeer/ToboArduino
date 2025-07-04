@@ -406,8 +406,8 @@ const unsigned char* displays[5] = {
 };
 
 
-#define ROTARY_PIN1 2
-#define ROTARY_PIN2 0
+#define ROTARY_PIN1 0
+#define ROTARY_PIN2 2
 
 #define CLICKS_PER_ROTATION 4  // The encoder outputs 4 times when rotated once
 

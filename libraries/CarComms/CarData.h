@@ -169,6 +169,6 @@ typedef struct BuzzerMsg {
 
 typedef struct AudioSourceMsg {
 	uint8_t audioSource;
-}
+} AudioSourceMsg;
 
 #endif
