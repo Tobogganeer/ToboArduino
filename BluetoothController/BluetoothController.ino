@@ -138,7 +138,7 @@ void initDial()
     dial.setRightRotationHandler(rotateRight);
 
     dialButton.begin(ROTARY_BUTTON);
-    dialButton.setTapHandler(click);
+    dialButton.setClickHandler(click);
 }
 
 
@@ -692,6 +692,8 @@ void rotateLeft(Rotary& dial)
 
         selectedOptionChanged();
     }
+    else if (state == STATE_DISPLAY)
+        skipBackward();
 }
 
 void rotateRight(Rotary& dial)
@@ -710,6 +712,8 @@ void rotateRight(Rotary& dial)
 
         selectedOptionChanged();
     }
+    else if (state == STATE_DISPLAY)
+        skipForward();
 }
 
 void selectedOptionChanged()
@@ -761,9 +765,22 @@ void click(Button2& btn)
             break;
         case STATE_DISCOVERABLE:
         case STATE_IDLE:
+            switchStateInstant(STATE_SETTINGS_MAIN);
+            break;
         case STATE_DISPLAY:
             // afterStateSwitched() handles setting discoverable
-            switchStateInstant(STATE_SETTINGS_MAIN);
+            // When playing, long click goes to settings
+            switch (btn.getType())
+            {
+                case long_click:
+                    switchStateInstant(STATE_SETTINGS_MAIN);
+                    break;
+                case single_click:
+                    if (playbackStatus == PLAYBACK_PLAYING)
+                        pause();
+                    else
+                        play();
+            }
             break;
     }
 }
@@ -924,13 +941,15 @@ void device_click()
             }
             else
             {
-                connect(devices.devices.addresses[selectedDevice]);
+                disconnect();
                 switchStateInstant(STATE_CONNECTING);
                 displayMessage("Connecting to", devices.devices.deviceNames[selectedDevice], true);
+                delay(250); // Give time to disconnect
+                connect(devices.devices.addresses[selectedDevice]);
             }
             break;
         case SETTINGS_DEVICE_FAVOURITE:
-            if (!devices.devices.favourite == selectedDevice)
+            if (devices.devices.favourite != selectedDevice)
             {
                 favourite(devices.devices.addresses[selectedDevice]);
                 switchStateWithIntermediate(STATE_SETTINGS_DEVICE, STATE_TRANSITION_MESSAGE, 1000);
@@ -1214,6 +1233,42 @@ void disconnect()
 
     //connected = false;
     memset(devices.devices.connected, 0, 6);
+}
+
+void skipForward()
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
+    msg.skipUpdate.forward = true;
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+}
+
+void skipBackward()
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
+    msg.skipUpdate.reverse = true;
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+}
+
+void pause()
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
+    msg.skipUpdate.pause = true;
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+
+    playbackStatus = PLAYBACK_PAUSED;
+}
+
+void play()
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
+    msg.skipUpdate.play = true;
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+
+    playbackStatus = PLAYBACK_PLAYING;
 }
 
 void setDiscoverable(bool discoverable)

@@ -82,16 +82,15 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
         memcpy(&info, data, sizeof(CarInfoMsg));
         displayInfo();
         /*
-    CarInfoMsg* info = (CarInfoMsg*)data;
-    Serial.print("Got data. RPM: ");
-    Serial.print(info->rpm);
-    Serial.print(", Speed:");
-    Serial.println(info->speed);
-    */
+        CarInfoMsg* info = (CarInfoMsg*)data;
+        Serial.print("Got data. RPM: ");
+        Serial.print(info->rpm);
+        Serial.print(", Speed:");
+        Serial.println(info->speed);
+        */
     }
 }
 
 void loop(void)
 {
-
 }
