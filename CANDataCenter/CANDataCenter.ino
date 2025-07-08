@@ -23,14 +23,10 @@ D2 -> INT (MSCAN)
 
 #include <mcp_can.h>
 #include <SPI.h>
-#include <ESP8266WiFi.h>
-#include <espnow.h>
-#include "CarData.h"
+#include <CarComms.h>
 
 //#define DEBUG_LOG
-
-CarData data;
-uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+CarInfoMsg data;
 
 // Sending data over ESP-NOW
 unsigned long lastDataSendTime = 0;
@@ -43,8 +39,6 @@ MCP_CAN MSCAN(2);  // MS/LS CAN bus, CS is pin 4 (GPIO2)
 #define HSCAN_INT 5  // Interrupt pin for normal CAN
 #define MSCAN_INT 4  // Interrupt pin for MS/LS CAN
 
-#define ESP_NOW_CHANNEL 4
-
 unsigned long rxId;
 byte len;
 byte rxBuf[8];
@@ -53,6 +47,8 @@ byte txBuf[8];
 #ifdef DEBUG_LOG
 char msgString[128];
 #endif
+
+CarComms comms(handleCarData);
 
 
 // Convertors from bytes to values
@@ -63,39 +59,25 @@ union Convertor
     int16_t shortVal;
     uint16_t ushortVal;
 
-    byte bytes[4];
+    uint8_t bytes[4];
 };
 
+Convertor convert(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4);
+Convertor convert(uint8_t b1, uint8_t b2);
 
 
 void setup()
 {
     // Start serial bus (not needed for final build)
-    Serial.begin(115200);
+    Serial.begin(921600);
 
     while (!Serial)
         ;
 
-    initESPNow();
     initCAN();
-}
 
-// https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
-void initESPNow()
-{
-    // Set device as a Wi-Fi Station
-    WiFi.mode(WIFI_STA);
-    wifi_set_channel(ESP_NOW_CHANNEL);
-
-    // Init ESP-NOW
-    if (esp_now_init() != 0)
-    {
-        Serial.println("Error initializing ESP-NOW");
-        return;
-    }
-
-    // Set ourselves to be the controller/sender
-    esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+    comms.begin();
+    comms.receiveTypeMask = CarDataType::ID_CARINFO;
 }
 
 void initCAN()
@@ -123,7 +105,9 @@ void initCAN()
 }
 
 
-
+void handleCarData(CarDataType type, const uint8_t* data, int len)
+{
+}
 
 void loop()
 {
@@ -145,7 +129,6 @@ void readCAN()
     // Check for MSCAN data
     if (!digitalRead(MSCAN_INT))
     {
-
         MSCAN.readMsgBuf(&rxId, &len, rxBuf);  // Read data: len = data length, buf = data byte(s)
         handleMSMessage();
     }
@@ -205,8 +188,8 @@ bool bt_forward;
 void handleHSMessage()
 {
 #ifdef DEBUG_LOG
-    sprintf(msgString, "HS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
-    Serial.println(msgString);
+    //sprintf(msgString, "HS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
+    //Serial.println(msgString);
     return;
 #endif
 
@@ -228,6 +211,7 @@ void handleHSMessage()
     {
         Serial.print("RPM: ");
         Serial.println(convert(rxBuf[1], rxBuf[0]).ushortVal);
+        data.rpm = convert(rxBuf[1], rxBuf[0]).ushortVal;
         // B1-2: RPM,
         // B3-4: Engine torque?
         // B5-6: Vehicle speed,
@@ -235,9 +219,11 @@ void handleHSMessage()
 
         Serial.print("Speed: ");
         Serial.println(convert(rxBuf[5], rxBuf[4]).ushortVal / 100.0f);
+        data.speed = convert(rxBuf[5], rxBuf[4]).ushortVal / 100.0f;
 
         Serial.print("Accel Pedal: ");
         Serial.println(rxBuf[6] / 2.0f);
+        data.throttlePosition = rxBuf[6] / 2;
     }
     if (rxId == 0x420)
     {
@@ -250,6 +236,8 @@ void handleHSMessage()
     {
         Serial.print("Fuel level: ");
         Serial.println((rxBuf[0] * 0.25f) / 55.0f * 100.0f);
+        data.fuelLevel = rxBuf[0];
+        
         // B1: Fuel level. 1 unit = 0,25l - 60.25L total (241 steps)
         // B2: Fuel tank sensor (?)
     }
@@ -263,8 +251,10 @@ void handleHSMessage()
 
         Serial.print("Hand brake: ");
         Serial.println((rxBuf[3] & 0b00000001) > 0);
+        data.handbrakeOn = (rxBuf[3] & 0b00000001) > 0;
         Serial.print("Reverse: ");
         Serial.println((rxBuf[3] & 0b00000010) > 0);
+        data.handbrakeOn = (rxBuf[3] & 0b00000010) > 0;
         printBits(rxBuf[3]);
         Serial.println();
     }
@@ -296,6 +286,8 @@ void handleMSMessage()
     if (rxId == 0x290)
     {
         // B2-8: First half of display, ASCII
+        // TODO: Detect welcome message and replace
+        // TODO: Detect AUX message and change based on current audio source
     }
     if (rxId == 0x291)
     {
@@ -303,18 +295,32 @@ void handleMSMessage()
     }
     if (rxId == 0x400)
     {
+        /*
+        float fuelEcoInst;
+        float fuelEcoAvg;
+        uint16_t kmRemaining;
+        uint8_t fuelLevel;
+        */
         Serial.print("Inst fuel consump: ");
         uint16_t inst = convert(rxBuf[3], rxBuf[2]).ushortVal;
         if (inst == 0xFFF3)
+        {
             Serial.println("---");
+            data.fuelEcoInst = 0.0f;
+        }
         else
+        {
             Serial.println(inst / 10.0f);
+            data.fuelEcoInst = inst / 10.0f;
+        }
 
         Serial.print("Avg fuel consump: ");
         Serial.println(convert(rxBuf[5], rxBuf[4]).ushortVal / 100.0f);
+        data.fuelEcoAvg = convert(rxBuf[5], rxBuf[4]).ushortVal / 100.0f;
 
         Serial.print("Dist remaining (km): ");
         Serial.println(convert(rxBuf[7], rxBuf[6]).ushortVal);
+        data.kmRemaining = convert(rxBuf[7], rxBuf[6]).ushortVal;
         // B1-2: Average speed (km/h). Might be one byte only
         // B3-4: Inst. fuel consumption L/100km (x/10, FFF3 = ---)
         // B5-6: Avg. fuel consumption L/100km (x/10). May be one byte only
@@ -324,6 +330,7 @@ void handleMSMessage()
     {
         Serial.print("Coolant temp: ");
         Serial.println(rxBuf[0] - 40);
+        data.coolantTemp = rxBuf[0] - 40;
         // B1: Engine coolant temperature (B1 - 40 = degrees celsius)
     }
     if (rxId == 0x28F)
@@ -372,22 +379,18 @@ void handleMSMessage()
 
 void sendCarData()
 {
-    esp_now_send(broadcastAddress, (uint8_t *)&data, sizeof(data));
+    comms.send(CarDataType::ID_CARINFO, &data, sizeof(data));
 
     lastDataSendTime = millis();
 }
 
 
 
-
-
-
-
-
-
 // ====================================================== UTIL ======================================================
 
-Convertor convert(byte b1, byte b2)
+
+
+Convertor convert(uint8_t b1, uint8_t b2)
 {
     Convertor conv;
     conv.bytes[0] = b1;
@@ -395,7 +398,7 @@ Convertor convert(byte b1, byte b2)
     return conv;
 }
 
-Convertor convert(byte b1, byte b2, byte b3, byte b4)
+Convertor convert(uint8_t b1, uint8_t b2, uint8_t b3, uint8_t b4)
 {
     Convertor conv;
     conv.bytes[0] = b1;
@@ -419,3 +422,4 @@ void printBits(byte val)
             ((val)&0x01 ? '1' : '0'));
     Serial.print(msgString);
 }
+

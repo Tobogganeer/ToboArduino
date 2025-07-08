@@ -1,0 +1,9 @@
+Pause/Play x3
+Seek up x2
+Seek down x2
+Pause/Play x1
+Steering skip
+Steering rewind
+Steering skip
+Steering rewind
+Pause/Play x1

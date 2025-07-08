@@ -17,7 +17,7 @@ def Init():
     for p in ports:
         if "Serial" in p.description:
             # Connect to arduino
-            arduino = serial.Serial(port=p.device, baudrate=115200, timeout=1)
+            arduino = serial.Serial(port=p.device, baudrate=921600, timeout=1)
             found = True
             print("Connected")
 
