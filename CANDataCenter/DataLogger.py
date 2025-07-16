@@ -39,9 +39,9 @@ def readData():
             if line:
 
 
-                timestamp = int(time.time() * 1000)
-                written = f"{timestamp},{line}\n"
-                f.write(written)
+                #timestamp = int(time.time() * 1000)
+                #written = f"{timestamp},{line}\n"
+                f.write(line + "\n")
                 #print(written)
             if msvcrt.kbhit() and msvcrt.getch() == b'\x1b': # 0x1B is escape
                 running = False

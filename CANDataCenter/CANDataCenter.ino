@@ -188,8 +188,24 @@ bool bt_forward;
 void handleHSMessage()
 {
 #ifdef DEBUG_LOG
-    //sprintf(msgString, "HS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
-    //Serial.println(msgString);
+    /*
+# from
+# timestamp,bus,id,len,b7,b6,b5,b4,b3,b2,b1,b0
+# 1751721260813,MS,0x50C,3,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x0C
+
+# to
+# Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8
+# 166064000,0000021A,false,0,8,FE,36,12,FE,69,05,07,AD,
+*/
+    // %n stores the num of currently written chars
+    int startOfBytes = 0;
+    sprintf(msgString, "%d,%.8X,false,0,%d%n,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X", micros(), rxId, len, &startOfBytes, rxBuf[0], rxBuf[1], rxBuf[2], rxBuf[3], rxBuf[4], rxBuf[5], rxBuf[6], rxBuf[7])
+    //sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
+    
+    // Put null terminator after the last byte (so we don't add empty bytes)
+    int charsAfterLen = len * 3; // Each byte is 3 chars, e.g. ",FE"
+    msgString[startOfBytes + charsAfterLen] = 0;
+    Serial.println(msgString);
     return;
 #endif
 
@@ -285,7 +301,14 @@ void handleMSMessage()
 # Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8
 # 166064000,0000021A,false,0,8,FE,36,12,FE,69,05,07,AD,
 */
-    sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
+    // %n stores the num of currently written chars
+    int startOfBytes = 0;
+    sprintf(msgString, "%d,%.8X,false,1,%d%n,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X", micros(), rxId, len, &startOfBytes, rxBuf[0], rxBuf[1], rxBuf[2], rxBuf[3], rxBuf[4], rxBuf[5], rxBuf[6], rxBuf[7])
+    //sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
+    
+    // Put null terminator after the last byte (so we don't add empty bytes)
+    int charsAfterLen = len * 3; // Each byte is 3 chars, e.g. ",FE"
+    msgString[startOfBytes + charsAfterLen] = 0;
     Serial.println(msgString);
     return;
 #endif
