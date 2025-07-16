@@ -15,6 +15,10 @@ typedef enum : uint8_t {
 } CarDataType;
 // Update the receiveTimes array in CarComms if any are added/removed
 
+// Constants so we can check for gears 1-5 using ints, then use these
+#define GEAR_NEUTRAL 0
+#define GEAR_REVERSE 6
+
 typedef enum : uint8_t {
 	Neutral,
 	First,
@@ -107,7 +111,7 @@ typedef struct BTInfoMsg {
 			uint8_t playStatus; // 197
 		} songInfo;
 		struct {
-			// Extracting constants from btAduio.h
+			// Extracting constants from btAudio.h
 			// Change these if those change (this is lazy but I don't really care)
 			uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
 			char deviceNames[5][32]; // 5 x 32 = 160
@@ -151,6 +155,8 @@ typedef struct BTTrackUpdateMsg {
 } BTTrackUpdateMsg;
 
 typedef struct OEMDisplayMsg {
+	bool sendToOEMDisplay;
+	bool isFirstHalf; // Only for messages from OEM display (sent in two CAN messages)
 	char message[14];
 } OEMDisplayMsg;
 

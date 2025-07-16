@@ -550,8 +550,8 @@ void displayMusic()
     //int currentSecs = (playPosMS / 1000) % 60;
     int totalMins = (songInfo.songInfo.trackLengthMS / 1000) / 60;
     int totalSecs = (songInfo.songInfo.trackLengthMS / 1000) % 60;
-    // T 5:06--------PAUSED
-    // ''''''''''''''''''''
+
+    // 5:06--------PAUSED
     char timeLine[19] = { 0 };
     sprintf(timeLine, "%d:%.2d", totalMins, totalSecs);
 

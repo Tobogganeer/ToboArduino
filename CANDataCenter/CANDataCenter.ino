@@ -77,7 +77,7 @@ void setup()
     initCAN();
 
     comms.begin();
-    comms.receiveTypeMask = CarDataType::ID_CARINFO;
+    comms.receiveTypeMask = CarDataType::ID_AUDIO_SOURCE | CarDataType::ID_OEM_DISPLAY;
 }
 
 void initCAN()
@@ -276,6 +276,15 @@ void handleHSMessage()
 void handleMSMessage()
 {
 #ifdef DEBUG_LOG
+/*
+# from
+# timestamp,bus,id,len,b7,b6,b5,b4,b3,b2,b1,b0
+# 1751721260813,MS,0x50C,3,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x0C
+
+# to
+# Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8
+# 166064000,0000021A,false,0,8,FE,36,12,FE,69,05,07,AD,
+*/
     sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
     Serial.println(msgString);
     return;
@@ -285,6 +294,18 @@ void handleMSMessage()
 
     if (rxId == 0x290)
     {
+        // Display on startup (first byte always empty):
+        // ...Hell
+        //        o......
+        if (memcmp(&rxBuf[3], "Hell", 4) == 0)
+        {
+            memcpy(&txBuf, " Daveiki", 8);
+            sendCANMessage(MSCAN, 0x290);
+
+            
+            memcpy(&txBuf, " s      ", 8);
+            sendCANMessage(MSCAN, 0x291);
+        }
         // B2-8: First half of display, ASCII
         // TODO: Detect welcome message and replace
         // TODO: Detect AUX message and change based on current audio source
