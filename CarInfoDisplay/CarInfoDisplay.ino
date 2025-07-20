@@ -16,6 +16,15 @@
 #include <Wire.h>
 #endif
 
+const unsigned char bmp_coolant [] PROGMEM = {
+	// 'Coolant temp, 24x24px
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 
+	0x07, 0xfc, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 0x07, 0xfc, 0xff, 0xe7, 
+	0xff, 0xff, 0xe7, 0xff, 0xff, 0x07, 0xfc, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xc3, 0xff, 
+	0xf3, 0xc3, 0xcf, 0x6d, 0xc3, 0xb6, 0x9e, 0xe7, 0x79, 0xff, 0xff, 0xff, 0xf3, 0x3c, 0xcf, 0x0d, 
+	0xc3, 0xb0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+};
+
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 //U8G2_SSD1306_128X64_ALT0_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);   // same as the NONAME variant, but may solve the "every 2nd line skipped" problem
@@ -42,6 +51,8 @@ long lastDisplayTime;
 #define FONT_SMALL u8g2_font_5x7_tr
 #define FONT_TINY u8g2_font_tiny5_tr
 
+char buffer[128];
+
 void setup(void)
 {
     u8g2.begin();
@@ -50,9 +61,50 @@ void setup(void)
 
     u8g2.clearBuffer();
 
+    /*
     u8g2.setCursor(20, 38);
     u8g2.setFont(FONT_LARGE);
     u8g2.print("System booting...");
+    */
+
+    // "682" (distance)
+    u8g2.setFont(FONT_KM_REMAINING);
+    sprintf(buffer, "%d", 682);
+    u8g2.setCursor(48 - ALIGN_RIGHT(buffer), 30);
+    u8g2.print(682);
+
+    // "Range"
+    u8g2.setFont(FONT_SMALL);
+    u8g2.setCursor(20, 6);
+    u8g2.print("Range");
+
+    // "km"
+    u8g2.setFont(FONT_LARGE);
+    u8g2.setCursor(52, 30);
+    u8g2.print("km");
+
+    // Avg. / Inst. eco
+    u8g2.setFont(FONT_SMALL);
+    u8g2.setCursor(1, 46);
+    u8g2.print(" Avg");
+    u8g2.setCursor(1, 61);
+    u8g2.print("Inst");
+
+    // Fuel eco numbers
+    u8g2.setFont(FONT_LARGE);
+    sprintf(buffer, "%.1f", 8.2849);
+    u8g2.setCursor(52 - ALIGN_RIGHT(buffer), 48);
+    u8g2.print(buffer);
+    sprintf(buffer, "%.1f", 17.293);
+    u8g2.setCursor(52 - ALIGN_RIGHT(buffer), 63);
+    u8g2.print(buffer);
+
+    // L/100km
+    u8g2.setFont(FONT_TINY);
+    u8g2.setCursor(56, 48);
+    u8g2.print("L/100km");
+    u8g2.setCursor(56, 63);
+    u8g2.print("L/100km");
 
     u8g2.sendBuffer();
 }
@@ -71,17 +123,36 @@ void displayInfo(CarInfoMsg& info)
     // TODO: Make actual proper display lol
     u8g2.clearBuffer();
 
+    // "682" (distance)
     u8g2.setFont(FONT_KM_REMAINING);
-    u8g2.setCursor(50 - ALIGN_RIGHT(String(info.kmRemaining).c_str()), 30);
-    u8g2.print("Range: ");
+    u8g2.setCursor(48 - ALIGN_RIGHT(String(info.kmRemaining).c_str()), 30);
     u8g2.print(info.kmRemaining);
+
+    // "Range"
+    u8g2.setFont(FONT_SMALL);
+    u8g2.setCursor(16, 6);
+    u8g2.print("Range");
+
+    // "km"
+    u8g2.setFont(FONT_LARGE);
+    u8g2.setCursor(52, 30);
     u8g2.print("km");
 
+    // Avg. / Inst.
+    //u8g2.setFont(FONT_LARGE);
+    u8g2.setCursor(2, 48);
+    u8g2.print("Avg:");
+    u8g2.setCursor(2, 64);
+    u8g2.print("Inst.");
+
+    // 8.2 L/
+    /*
     u8g2.setCursor(DISPLAY_X, DISPLAY_Y + LINE_SPACING * 1);
     u8g2.print("Eco (inst): ");
     u8g2.print(info.fuelEcoInst);
     u8g2.print("L/100km");
 
+    // 100km
     u8g2.setCursor(DISPLAY_X, DISPLAY_Y + LINE_SPACING * 2);
     u8g2.print("Eco (avg): ");
     u8g2.print(info.fuelEcoAvg);
@@ -91,6 +162,7 @@ void displayInfo(CarInfoMsg& info)
     u8g2.print("Coolant temp: ");
     u8g2.print(info.coolantTemp);
     u8g2.print("c");
+    */
 
     u8g2.sendBuffer();
 }
