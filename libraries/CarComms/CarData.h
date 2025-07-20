@@ -156,7 +156,6 @@ typedef struct BTTrackUpdateMsg {
 
 typedef struct OEMDisplayMsg {
 	bool sendToOEMDisplay;
-	bool isFirstHalf; // Only for messages from OEM display (sent in two CAN messages)
 	char message[14];
 } OEMDisplayMsg;
 

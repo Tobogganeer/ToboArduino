@@ -48,6 +48,8 @@ byte txBuf[8];
 char msgString[128];
 #endif
 
+char oemDisplayString[14];
+
 CarComms comms(handleCarData);
 
 
@@ -104,9 +106,35 @@ void initCAN()
     SPI.setClockDivider(SPI_CLOCK_DIV2);  // Set SPI to run at 8MHz (16MHz / 2 = 8 MHz)
 }
 
+void displayOnOEMDisplay(char* message)
+{
+    // Note: it looks like 0x290 always starts with 0xC0,
+    //  while 0x291 starts with 0x87
+    // (the last 7 bytes are the ascii chars displayed)
+    // C0, 87
+
+    txBuf[0] = 0xC0;
+    memcpy(&txBuf[1], &message[0], 7);
+    sendCANMessage(MSCAN, 0x290);
+
+    txBuf[0] = 0x87;
+    memcpy(&txBuf[1], &message[7], 7);
+    sendCANMessage(MSCAN, 0x291);
+}
 
 void handleCarData(CarDataType type, const uint8_t* data, int len)
 {
+    if (type == CarDataType::ID_OEM_DISPLAY)
+    {
+        // OEMDisplayMsg
+        // bool sendToOEMDisplay
+        // char message[14]
+    }
+    else if (type == CarDataType::ID_AUDIO_SOURCE)
+    {
+        // AudioSourceMsg
+        // uint8_t audioSource
+    }
 }
 
 void loop()
@@ -138,6 +166,29 @@ void sendCANMessage(MCP_CAN bus, unsigned long id)
 {
     // id, extended, length, data
     bus.sendMsgBuf(id, 0, 8, txBuf);
+}
+
+void oemDisplayUpdated()
+{
+    // Check for 'Hello' and replace with custom message
+    // ...Hello......
+    const char* hello = "HELLO";
+    if (memcmp(&oemDisplayString[3], hello, 5) == 0)
+    {
+        const char* customWelcome = "Daveikis      ";  // Pad with spaces up to 14 chars
+        displayOnOEMDisplay(customWelcome);
+        return;
+    }
+
+    // TODO: Detect AUX message and change based on current audio source
+    const char* aux = "AUX";
+    if (memcmp(&oemDisplayString, aux, 3) == 0)
+    {
+        return;
+    }
+
+    // TODO: Tell other modules what is displayed
+    //comms.send
 }
 
 /*
@@ -200,10 +251,10 @@ void handleHSMessage()
     // %n stores the num of currently written chars
     int startOfBytes = 0;
     sprintf(msgString, "%d,%.8X,false,0,%d%n,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X", micros(), rxId, len, &startOfBytes, rxBuf[0], rxBuf[1], rxBuf[2], rxBuf[3], rxBuf[4], rxBuf[5], rxBuf[6], rxBuf[7])
-    //sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
-    
-    // Put null terminator after the last byte (so we don't add empty bytes)
-    int charsAfterLen = len * 3; // Each byte is 3 chars, e.g. ",FE"
+      //sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
+
+      // Put null terminator after the last byte (so we don't add empty bytes)
+      int charsAfterLen = len * 3;  // Each byte is 3 chars, e.g. ",FE"
     msgString[startOfBytes + charsAfterLen] = 0;
     Serial.println(msgString);
     return;
@@ -253,7 +304,7 @@ void handleHSMessage()
         Serial.print("Fuel level: ");
         Serial.println((rxBuf[0] * 0.25f) / 55.0f * 100.0f);
         data.fuelLevel = rxBuf[0];
-        
+
         // B1: Fuel level. 1 unit = 0,25l - 60.25L total (241 steps)
         // B2: Fuel tank sensor (?)
     }
@@ -292,7 +343,7 @@ void handleHSMessage()
 void handleMSMessage()
 {
 #ifdef DEBUG_LOG
-/*
+    /*
 # from
 # timestamp,bus,id,len,b7,b6,b5,b4,b3,b2,b1,b0
 # 1751721260813,MS,0x50C,3,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x0C
@@ -304,10 +355,10 @@ void handleMSMessage()
     // %n stores the num of currently written chars
     int startOfBytes = 0;
     sprintf(msgString, "%d,%.8X,false,1,%d%n,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X", micros(), rxId, len, &startOfBytes, rxBuf[0], rxBuf[1], rxBuf[2], rxBuf[3], rxBuf[4], rxBuf[5], rxBuf[6], rxBuf[7])
-    //sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
-    
-    // Put null terminator after the last byte (so we don't add empty bytes)
-    int charsAfterLen = len * 3; // Each byte is 3 chars, e.g. ",FE"
+      //sprintf(msgString, "MS,0x%.2X,%d,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X,0x%.2X", rxId, len, rxBuf[7], rxBuf[6], rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2], rxBuf[1], rxBuf[0]);
+
+      // Put null terminator after the last byte (so we don't add empty bytes)
+      int charsAfterLen = len * 3;  // Each byte is 3 chars, e.g. ",FE"
     msgString[startOfBytes + charsAfterLen] = 0;
     Serial.println(msgString);
     return;
@@ -317,25 +368,15 @@ void handleMSMessage()
 
     if (rxId == 0x290)
     {
-        // Display on startup (first byte always empty):
-        // ...Hell
-        //        o......
-        if (memcmp(&rxBuf[3], "Hell", 4) == 0)
-        {
-            memcpy(&txBuf, " Daveiki", 8);
-            sendCANMessage(MSCAN, 0x290);
-
-            
-            memcpy(&txBuf, " s      ", 8);
-            sendCANMessage(MSCAN, 0x291);
-        }
         // B2-8: First half of display, ASCII
-        // TODO: Detect welcome message and replace
-        // TODO: Detect AUX message and change based on current audio source
+        memcpy(&oemDisplayString[0], &rxBuf[1], 7);
+        // 0x290 is always followed by 0x291 - wait for that, then check for string
     }
     if (rxId == 0x291)
     {
         // B2-8: Second half of display, ASCII
+        memcpy(&oemDisplayString[7], &rxBuf[1], 7);
+        oemDisplayUpdated();
     }
     if (rxId == 0x400)
     {
@@ -466,4 +507,3 @@ void printBits(byte val)
             ((val)&0x01 ? '1' : '0'));
     Serial.print(msgString);
 }
-
