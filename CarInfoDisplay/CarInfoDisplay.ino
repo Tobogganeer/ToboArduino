@@ -18,11 +18,11 @@
 
 const unsigned char bmp_coolant [] PROGMEM = {
 	// 'Coolant temp, 24x24px
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 
-	0x07, 0xfc, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 0x07, 0xfc, 0xff, 0xe7, 
-	0xff, 0xff, 0xe7, 0xff, 0xff, 0x07, 0xfc, 0xff, 0xe7, 0xff, 0xff, 0xe7, 0xff, 0xff, 0xc3, 0xff, 
-	0xf3, 0xc3, 0xcf, 0x6d, 0xc3, 0xb6, 0x9e, 0xe7, 0x79, 0xff, 0xff, 0xff, 0xf3, 0x3c, 0xcf, 0x0d, 
-	0xc3, 0xb0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 
+	0xf8, 0x03, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0xf8, 0x03, 0x00, 0x18, 
+	0x00, 0x00, 0x18, 0x00, 0x00, 0xf8, 0x03, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x3c, 0x00, 
+	0x0c, 0x3c, 0x30, 0x92, 0x3c, 0x49, 0x61, 0x18, 0x86, 0x00, 0x00, 0x00, 0x0c, 0xc3, 0x30, 0xf2, 
+	0x3c, 0x4f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 
@@ -61,15 +61,30 @@ void setup(void)
 
     u8g2.clearBuffer();
 
-    /*
-    u8g2.setCursor(20, 38);
+    u8g2.setCursor(6, 38);
     u8g2.setFont(FONT_LARGE);
     u8g2.print("System booting...");
-    */
+
+    u8g2.sendBuffer();
+}
+
+void displayInfo(CarInfoMsg& info)
+{
+    // Don't refresh every 100ms
+    if (millis() - lastDisplayTime < MIN_DISPLAY_DELAY_MS)
+        return;
+
+    lastDisplayTime = millis() + MIN_DISPLAY_DELAY_MS;
+
+
+    // TODO: Don't clear the buffer every time, draw spaces instead
+    // TODO: Only redraw info that has changed (see BluetoothController)
+    // TODO: Make actual proper display lol
+    u8g2.clearBuffer();
 
     // "682" (distance)
     u8g2.setFont(FONT_KM_REMAINING);
-    sprintf(buffer, "%d", 682);
+    sprintf(buffer, "%d", info.kmRemaining);
     u8g2.setCursor(48 - ALIGN_RIGHT(buffer), 30);
     u8g2.print(682);
 
@@ -92,10 +107,10 @@ void setup(void)
 
     // Fuel eco numbers
     u8g2.setFont(FONT_LARGE);
-    sprintf(buffer, "%.1f", 8.2849);
+    sprintf(buffer, "%.1f", info.fuelEcoAvg);
     u8g2.setCursor(52 - ALIGN_RIGHT(buffer), 48);
     u8g2.print(buffer);
-    sprintf(buffer, "%.1f", 17.293);
+    sprintf(buffer, "%.1f", info.fuelEcoInst);
     u8g2.setCursor(52 - ALIGN_RIGHT(buffer), 63);
     u8g2.print(buffer);
 
@@ -106,63 +121,12 @@ void setup(void)
     u8g2.setCursor(56, 63);
     u8g2.print("L/100km");
 
-    u8g2.sendBuffer();
-}
-
-void displayInfo(CarInfoMsg& info)
-{
-    // Don't refresh every 100ms
-    if (millis() - lastDisplayTime < MIN_DISPLAY_DELAY_MS)
-        return;
-
-    lastDisplayTime = millis() + MIN_DISPLAY_DELAY_MS;
-
-
-    // TODO: Don't clear the buffer every time, draw spaces instead
-    // TODO: Only redraw info that has changed (see BluetoothController)
-    // TODO: Make actual proper display lol
-    u8g2.clearBuffer();
-
-    // "682" (distance)
-    u8g2.setFont(FONT_KM_REMAINING);
-    u8g2.setCursor(48 - ALIGN_RIGHT(String(info.kmRemaining).c_str()), 30);
-    u8g2.print(info.kmRemaining);
-
-    // "Range"
-    u8g2.setFont(FONT_SMALL);
-    u8g2.setCursor(16, 6);
-    u8g2.print("Range");
-
-    // "km"
+    // Coolant
+    u8g2.drawXBMP(104, 0, 24, 24, bmp_coolant);
     u8g2.setFont(FONT_LARGE);
-    u8g2.setCursor(52, 30);
-    u8g2.print("km");
-
-    // Avg. / Inst.
-    //u8g2.setFont(FONT_LARGE);
-    u8g2.setCursor(2, 48);
-    u8g2.print("Avg:");
-    u8g2.setCursor(2, 64);
-    u8g2.print("Inst.");
-
-    // 8.2 L/
-    /*
-    u8g2.setCursor(DISPLAY_X, DISPLAY_Y + LINE_SPACING * 1);
-    u8g2.print("Eco (inst): ");
-    u8g2.print(info.fuelEcoInst);
-    u8g2.print("L/100km");
-
-    // 100km
-    u8g2.setCursor(DISPLAY_X, DISPLAY_Y + LINE_SPACING * 2);
-    u8g2.print("Eco (avg): ");
-    u8g2.print(info.fuelEcoAvg);
-    u8g2.print("L/100km");
-
-    u8g2.setCursor(DISPLAY_X, DISPLAY_Y + LINE_SPACING * 3);
-    u8g2.print("Coolant temp: ");
-    u8g2.print(info.coolantTemp);
-    u8g2.print("c");
-    */
+    sprintf(buffer, "%dc", info.coolantTemp);
+    u8g2.setCursor(128 - ALIGN_RIGHT(buffer), 35);
+    u8g2.print(buffer);
 
     u8g2.sendBuffer();
 }
