@@ -45,6 +45,9 @@ esp_timer_handle_t connectTimer;
 
 uint8_t btAudio::tl = 0;
 
+bool btAudio::_discoverable = true;
+bool btAudio::_connectable = true;
+
 uint8_t btAudio::nextTL()
 {
     // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/bluetooth/esp_avrc.html#_CPPv442esp_avrc_ct_send_register_notification_cmd7uint8_t7uint8_t8uint32_t
@@ -102,13 +105,23 @@ void btAudio::begin()
     setDiscoverable(true);
 }
 
+void setConnectableAndDiscoverable()
+{
+    esp_bt_gap_set_scan_mode(
+        btAudio::_connectable ? ESP_BT_CONNECTABLE : ESP_BT_NON_CONNECTABLE,
+        btAudio::_discoverable ? ESP_BT_GENERAL_DISCOVERABLE : ESP_BT_NON_DISCOVERABLE);
+}
+
 void btAudio::setDiscoverable(bool discoverable)
 {
-    #if ESP_IDF_VERSION_MAJOR > 3
-    esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, discoverable ? ESP_BT_GENERAL_DISCOVERABLE : ESP_BT_NON_DISCOVERABLE);
-#else
-    esp_bt_gap_set_scan_mode(discoverable ? ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE : ESP_BT_SCAN_MODE_CONNECTABLE);
-#endif
+    btAudio::_discoverable = discoverable;
+    setConnectableAndDiscoverable();
+}
+
+void btAudio::setConnectable(bool connectable)
+{
+    btAudio::_connectable = connectable;
+    setConnectableAndDiscoverable();
 }
 
 void btAudio::end()

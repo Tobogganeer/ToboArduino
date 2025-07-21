@@ -35,6 +35,7 @@ class btAudio
     void reconnect();
     void setSinkCallback(void (*sinkCallback)(const uint8_t *data, uint32_t len));
     void setDiscoverable(bool discoverable);
+    void setConnectable(bool connectable);
 
     // I2S Audio
     void I2S(int bck, int dout, int ws);
@@ -77,6 +78,9 @@ class btAudio
     static bool isReconnecting() { return reconnecting; }
 
   private:
+    static bool _discoverable;
+    static bool _connectable;
+
     const char* _devName;
     static int32_t _sampleRate;
 

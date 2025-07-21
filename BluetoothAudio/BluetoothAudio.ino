@@ -232,6 +232,9 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
             // TODO: Should we compare msg->device to the current connected one?
             audio.disconnect();
             break;
+        case BT_UPDATE_SET_CONNECTABLE:
+            audio.setConnectable(msg->connectable);
+            break;
     }
 }
 
