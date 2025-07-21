@@ -26,7 +26,7 @@ D2 -> INT (MSCAN)
 #include <CarComms.h>
 
 // ======================= LOGGING ===============
-#define DEBUG_LOG
+//#define DEBUG_LOG
 // ===============================================
 
 
@@ -102,7 +102,7 @@ uint32_t build_int;
 int frameLen;
 #endif
 
-char oemDisplayString[14];
+char oemDisplayString[12];
 
 CarComms comms(handleCarData);
 
@@ -124,11 +124,13 @@ Convertor convert(uint8_t b1, uint8_t b2);
 
 void setup()
 {
-    // Start serial bus (not needed for final build)
+// Start serial bus (not needed for final build)
+#ifdef DEBUG_LOG
     Serial.begin(1000000);
 
     while (!Serial)
         ;
+#endif
 
     initCAN();
 
@@ -168,11 +170,11 @@ void displayOnOEMDisplay(const char* message)
     // C0, 87
 
     txBuf[0] = 0xC0;
-    memcpy(&txBuf[1], &message[0], 7);
+    memcpy(&txBuf[1], &message[0], 7); // 7 chars
     sendCANMessage(MSCAN, 0x290);
 
     txBuf[0] = 0x87;
-    memcpy(&txBuf[1], &message[7], 7);
+    memcpy(&txBuf[1], &message[7], 5); // 5 chars
     sendCANMessage(MSCAN, 0x291);
 }
 
@@ -849,7 +851,7 @@ void handleHSMessage()
     transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 8);
     transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 16);
     transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 24);
-    uint8_t bus = 0; // 0=HS, 1=MS
+    uint8_t bus = 0;  // 0=HS, 1=MS
     transmitBuffer[transmitBufferLength++] = len + (uint8_t)(bus << 4);
     for (int c = 0; c < len; c++)
     {
@@ -857,7 +859,7 @@ void handleHSMessage()
     }
     //temp = checksumCalc(buff, 11 + frame.length);
     //temp = 0;
-    transmitBuffer[transmitBufferLength++] = 0;//temp;
+    transmitBuffer[transmitBufferLength++] = 0;  //temp;
 
     return;
 #endif
@@ -932,6 +934,7 @@ void handleHSMessage()
         // B1-2: Steering angle. Values from about 0x6958 (all way left) to about 0x96A8 all way right).
         // Can have offset, because when turning on dashboard it always resets to zero, regardless of the effective steering angle position.
     }
+    /*
     if (rxId == 0x4F2)
     {
         Serial.print("Odometer: ");
@@ -939,6 +942,7 @@ void handleHSMessage()
         // B2-3: Odometer
         // Might be first byte too to get the range
     }
+    */
 }
 
 
@@ -979,7 +983,7 @@ void handleMSMessage()
     transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 8);
     transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 16);
     transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 24);
-    uint8_t bus = 1; // 0=HS, 1=MS
+    uint8_t bus = 1;  // 0=HS, 1=MS
     transmitBuffer[transmitBufferLength++] = len + (uint8_t)(bus << 4);
     for (int c = 0; c < len; c++)
     {
@@ -987,7 +991,7 @@ void handleMSMessage()
     }
     //temp = checksumCalc(buff, 11 + frame.length);
     //temp = 0;
-    transmitBuffer[transmitBufferLength++] = 0;//temp;
+    transmitBuffer[transmitBufferLength++] = 0;  //temp;
 
     return;
 #endif
@@ -1003,8 +1007,15 @@ void handleMSMessage()
     if (rxId == 0x291)
     {
         // B2-8: Second half of display, ASCII
-        memcpy(&oemDisplayString[7], &rxBuf[1], 7);
+        // Second 'half' is only 5 chars (12 total)
+        memcpy(&oemDisplayString[7], &rxBuf[1], 5);
         oemDisplayUpdated();
+    }
+    if (rxId == 0x39E)
+    {
+        // B3-6: Odometer
+        uint32_t odo = convert(rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2]).uintVal;
+        data.odometer = odo;
     }
     if (rxId == 0x400)
     {

@@ -158,7 +158,7 @@ typedef struct BTTrackUpdateMsg {
 
 typedef struct OEMDisplayMsg {
 	bool sendToOEMDisplay;
-	char message[14];
+	char message[12];
 } OEMDisplayMsg;
 
 typedef struct ReverseProximityMsg {

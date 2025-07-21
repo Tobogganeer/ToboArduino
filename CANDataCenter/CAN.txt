@@ -1,0 +1,19 @@
+0x291
+Volume: Byte[2] is ones, baseline is 0x30 Byte[1] is tens, baseline is 0x20 then 0x31 when over 10
+e.g. volume 5 is 0x20 0x35, volume 11 is 0x31 0x31, volume 36 is 0x33 0x36
+i'm a dummy this is the display
+
+however you could still use this to detect volume :)
+..VOL..13...
+Note: display is only 12 chars, not 14
+
+0x28F showing activity on byte[3] when seeking
+Seems to show last control? Value is 0x38 when seeking with wheel or stereo, then 0x00 when adjusting volume on either
+Goes back to 0x38 5 seconds after adjusting volume
+Ok this is just something with the display - not sure what though
+Maybe tells stereo when to go back to showing song info?
+
+0x39E (MS)
+Odometer
+Bytes [3], [4], [5], (i guess [2] would be the first
+225036 (current km) message is 0C 00 00 03 6F 0C 00 00
