@@ -34,6 +34,8 @@ void setup()
     int bck = 5;
     audio.I2S(bck, dout, ws);
 
+    audio.volume(0.75f); // Quite loud at 10 (car volume) and we want to get rid of popping
+
     comms.begin();
     comms.receiveTypeMask = CarDataType::ID_BT_TRACK_UPDATE;
 
@@ -108,6 +110,9 @@ void connectedCallback(const esp_bd_addr_t bda, const char* deviceName, int name
     memcpy(&msg.sourceDevice.deviceName, deviceName, min(nameLen, 32));
     msg.sourceDevice.deviceName[31] = 0; // Null-terminate last character (name limit is 32 chars);
     comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
+
+    // Try to play audio when we connect
+    audio.play();
 }
 
 void disconnectedCallback(const esp_bd_addr_t bda, const char* deviceName, int nameLen)
