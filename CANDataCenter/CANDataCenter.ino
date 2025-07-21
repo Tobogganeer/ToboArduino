@@ -312,25 +312,25 @@ void processIncomingByte(uint8_t in_byte)
                     buff[0] = 0xF1;
                     break;
                 case PROTO_GET_CANBUS_PARAMS:
-                {
-                    //immediately return data on canbus params
-                    transmitBuffer[transmitBufferLength++] = 0xF1;
-                    transmitBuffer[transmitBufferLength++] = 6;
-                    transmitBuffer[transmitBufferLength++] = true + ((unsigned char)false << 4);
-                    uint32_t hsSpeed = 500000;
-                    transmitBuffer[transmitBufferLength++] = hsSpeed;
-                    transmitBuffer[transmitBufferLength++] = hsSpeed >> 8;
-                    transmitBuffer[transmitBufferLength++] = hsSpeed >> 16;
-                    transmitBuffer[transmitBufferLength++] = hsSpeed >> 24;
-                    transmitBuffer[transmitBufferLength++] = true + ((unsigned char)false << 4);
-                    uint32_t msSpeed = 125000;
-                    transmitBuffer[transmitBufferLength++] = msSpeed;
-                    transmitBuffer[transmitBufferLength++] = msSpeed >> 8;
-                    transmitBuffer[transmitBufferLength++] = msSpeed >> 16;
-                    transmitBuffer[transmitBufferLength++] = msSpeed >> 24;
-                    state = IDLE;
-                    break;
-                }
+                    {
+                        //immediately return data on canbus params
+                        transmitBuffer[transmitBufferLength++] = 0xF1;
+                        transmitBuffer[transmitBufferLength++] = 6;
+                        transmitBuffer[transmitBufferLength++] = true + ((unsigned char)false << 4);
+                        uint32_t hsSpeed = 500000;
+                        transmitBuffer[transmitBufferLength++] = hsSpeed;
+                        transmitBuffer[transmitBufferLength++] = hsSpeed >> 8;
+                        transmitBuffer[transmitBufferLength++] = hsSpeed >> 16;
+                        transmitBuffer[transmitBufferLength++] = hsSpeed >> 24;
+                        transmitBuffer[transmitBufferLength++] = true + ((unsigned char)false << 4);
+                        uint32_t msSpeed = 125000;
+                        transmitBuffer[transmitBufferLength++] = msSpeed;
+                        transmitBuffer[transmitBufferLength++] = msSpeed >> 8;
+                        transmitBuffer[transmitBufferLength++] = msSpeed >> 16;
+                        transmitBuffer[transmitBufferLength++] = msSpeed >> 24;
+                        state = IDLE;
+                        break;
+                    }
                 case PROTO_GET_DEV_INFO:
                     //immediately return device information
                     transmitBuffer[transmitBufferLength++] = 0xF1;
@@ -824,6 +824,7 @@ void handleHSMessage()
 # Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8
 # 166064000,0000021A,false,0,8,FE,36,12,FE,69,05,07,AD,
 */
+    /*
     // %n stores the num of currently written chars
     int startOfBytes = 0;
     sprintf(msgString, "%d,%.8X,false,0,%d%n,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X", micros(), rxId, len, &startOfBytes, rxBuf[0], rxBuf[1], rxBuf[2], rxBuf[3], rxBuf[4], rxBuf[5], rxBuf[6], rxBuf[7]);
@@ -833,6 +834,31 @@ void handleHSMessage()
     int charsAfterLen = len * 3;  // Each byte is 3 chars, e.g. ",FE"
     msgString[startOfBytes + charsAfterLen] = 0;
     Serial.println(msgString);
+    */
+
+    //https://github.com/collin80/ESP32RET/blob/master/commbuffer.cpp
+    //if (frame.extended) frame.id |= 1 << 31;
+    transmitBuffer[transmitBufferLength++] = 0xF1;
+    transmitBuffer[transmitBufferLength++] = 0;  //0 = canbus frame sending
+    uint32_t now = micros();
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(now & 0xFF);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(now >> 8);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(now >> 16);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(now >> 24);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId & 0xFF);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 8);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 16);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 24);
+    uint8_t bus = 0; // 0=HS, 1=MS
+    transmitBuffer[transmitBufferLength++] = len + (uint8_t)(bus << 4);
+    for (int c = 0; c < len; c++)
+    {
+        transmitBuffer[transmitBufferLength++] = rxBuf[c];
+    }
+    //temp = checksumCalc(buff, 11 + frame.length);
+    //temp = 0;
+    transmitBuffer[transmitBufferLength++] = 0;//temp;
+
     return;
 #endif
 
@@ -928,6 +954,7 @@ void handleMSMessage()
 # Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8
 # 166064000,0000021A,false,0,8,FE,36,12,FE,69,05,07,AD,
 */
+    /*
     // %n stores the num of currently written chars
     int startOfBytes = 0;
     sprintf(msgString, "%d,%.8X,false,1,%d%n,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X,%.2X", micros(), rxId, len, &startOfBytes, rxBuf[0], rxBuf[1], rxBuf[2], rxBuf[3], rxBuf[4], rxBuf[5], rxBuf[6], rxBuf[7]);
@@ -937,6 +964,31 @@ void handleMSMessage()
     int charsAfterLen = len * 3;  // Each byte is 3 chars, e.g. ",FE"
     msgString[startOfBytes + charsAfterLen] = 0;
     Serial.println(msgString);
+    */
+
+    //https://github.com/collin80/ESP32RET/blob/master/commbuffer.cpp
+    //if (frame.extended) frame.id |= 1 << 31;
+    transmitBuffer[transmitBufferLength++] = 0xF1;
+    transmitBuffer[transmitBufferLength++] = 0;  //0 = canbus frame sending
+    uint32_t now = micros();
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(now & 0xFF);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(now >> 8);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(now >> 16);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(now >> 24);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId & 0xFF);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 8);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 16);
+    transmitBuffer[transmitBufferLength++] = (uint8_t)(rxId >> 24);
+    uint8_t bus = 1; // 0=HS, 1=MS
+    transmitBuffer[transmitBufferLength++] = len + (uint8_t)(bus << 4);
+    for (int c = 0; c < len; c++)
+    {
+        transmitBuffer[transmitBufferLength++] = rxBuf[c];
+    }
+    //temp = checksumCalc(buff, 11 + frame.length);
+    //temp = 0;
+    transmitBuffer[transmitBufferLength++] = 0;//temp;
+
     return;
 #endif
 
