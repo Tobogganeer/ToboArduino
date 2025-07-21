@@ -145,6 +145,7 @@ void initDial()
 
     dialButton.begin(ROTARY_BUTTON);
     dialButton.setClickHandler(click);
+    dialButton.setLongClickDetectedHandler(longClick);
 }
 
 
@@ -783,18 +784,19 @@ void click(Button2& btn)
         case STATE_DISPLAY:
             // afterStateSwitched() handles setting discoverable
             // When playing, long click goes to settings
-            switch (btn.getType())
-            {
-                case long_click:
-                    switchStateInstant(STATE_SETTINGS_MAIN);
-                    break;
-                case single_click:
-                    if (playbackStatus == PLAYBACK_PLAYING)
-                        pause();
-                    else
-                        play();
-            }
+            if (playbackStatus == PLAYBACK_PLAYING)
+                pause();
+            else
+                play();
             break;
+    }
+}
+
+void longClick(Button2& btn)
+{
+    if (state == STATE_DISPLAY)
+    {
+        switchStateInstant(STATE_SETTINGS_MAIN);
     }
 }
 
