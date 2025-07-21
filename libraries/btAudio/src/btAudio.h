@@ -58,6 +58,8 @@ class btAudio
     static uint32_t totalTrackDurationMS;
     static uint32_t currentTrackPosMS;
     static String sourceDeviceName;
+    static bool _discoverable;
+    static bool _connectable;
 
     static bool avrcConnected;
     static esp_bd_addr_t avrcAddress;
@@ -78,9 +80,6 @@ class btAudio
     static bool isReconnecting() { return reconnecting; }
 
   private:
-    static bool _discoverable;
-    static bool _connectable;
-
     const char* _devName;
     static int32_t _sampleRate;
 
