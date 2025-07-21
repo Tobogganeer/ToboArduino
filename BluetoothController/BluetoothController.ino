@@ -56,7 +56,8 @@ enum : uint8_t
 #define MESSAGE_DISCONNECT_TIME 4000
 #define MESSAGE_CONNECT_TIME 2000
 
-// TODO: Change these once it's actually connected
+#define DISCONNECT_SET_UNCONNECTABLE_TIME 1000 // When we disconnect, make audio module unconnectable for this time
+
 #define ROTARY_PIN1 D3
 #define ROTARY_PIN2 D4
 #define ROTARY_BUTTON D5
@@ -81,6 +82,9 @@ State nextState;
 long stateSwitchTimeMS;
 bool switchingState;
 long lastStateSwitchTimeMS;
+
+bool waitingToSetConnectable;
+long disconnectTime;
 
 BTInfoMsg devices;
 BTInfoMsg songInfo;
@@ -111,6 +115,8 @@ void afterStateSwitched(State from, State to);
 
 void setup()
 {
+    delay(1000);
+
     lcd.init();
     lcd.backlight();
 
@@ -170,6 +176,13 @@ void loop()
             stateSwitchTimeMS = 0;
             stateTimerCB(nullptr);
         }
+    }
+
+    // Should we turn connection back on?
+    if (waitingToSetConnectable && (disconnectTime + DISCONNECT_SET_UNCONNECTABLE_TIME) < millis())
+    {
+        waitingToSetConnectable = false;
+        setConnectable(true);
     }
 }
 
@@ -944,7 +957,11 @@ void device_click()
                 disconnect();
                 switchStateInstant(STATE_CONNECTING);
                 displayMessage("Connecting to", devices.devices.deviceNames[selectedDevice], true);
-                delay(250); // Give time to disconnect
+                // I don't feel like working out the logic for connecting once the radio is back on
+                //  so I'll just call setConnectable from here
+                delay(DISCONNECT_SET_UNCONNECTABLE_TIME); // Give time to disconnect and turn connection back on
+                setConnectable(true);
+                delay(250);
                 connect(devices.devices.addresses[selectedDevice]);
             }
             break;
@@ -1233,6 +1250,11 @@ void disconnect()
 
     //connected = false;
     memset(devices.devices.connected, 0, 6);
+
+    // Turn connection "off" so phone doesn't reconnect immediately
+    disconnectTime = millis();
+    waitingToSetConnectable = true;
+    setConnectable(false);
 }
 
 void skipForward()
@@ -1276,5 +1298,13 @@ void setDiscoverable(bool discoverable)
     BTTrackUpdateMsg msg;
     msg.type = BTTrackUpdateType::BT_UPDATE_SET_DISCOVERABLE;
     msg.discoverable = discoverable;
+    comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
+}
+
+void setConnectable(bool connectable)
+{
+    BTTrackUpdateMsg msg;
+    msg.type = BTTrackUpdateType::BT_UPDATE_SET_CONNECTABLE;
+    msg.connectable = connectable;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 }

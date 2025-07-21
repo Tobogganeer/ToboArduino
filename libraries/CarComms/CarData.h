@@ -46,6 +46,7 @@ typedef enum : uint8_t {
 	BT_UPDATE_SET_DISCOVERABLE,
 	BT_UPDATE_DEVICE_CONNECT, // These are in TrackUpdate so the main BTAudio can listen for the packets
 	BT_UPDATE_DEVICE_DISCONNECT,
+	BT_UPDATE_SET_CONNECTABLE,
 } BTTrackUpdateType;
 
 typedef enum : uint8_t {
@@ -136,6 +137,7 @@ typedef struct BTTrackUpdateMsg {
 	{
 		uint8_t device[6]; // For favouriting, deleting, connecting, etc
 		bool discoverable;
+		bool connectable;
 		struct {
 			BTTrackSongPosUpdateType updateType;
 			union {
