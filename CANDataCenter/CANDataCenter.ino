@@ -1034,8 +1034,8 @@ void handleMSMessage()
         }
         else
         {
-            Serial.println(inst / 10.0f);
-            data.fuelEcoInst = inst / 10.0f;
+            Serial.println(inst / 100.0f);
+            data.fuelEcoInst = inst / 100.0f;
         }
 
         Serial.print("Avg fuel consump: ");

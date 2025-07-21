@@ -42,7 +42,7 @@ U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
 CarComms comms(handleCarData);
 
-#define MIN_DISPLAY_DELAY_MS 500
+#define MIN_DISPLAY_DELAY_MS 200
 
 long lastDisplayTime;
 
