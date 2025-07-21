@@ -65,7 +65,7 @@ class btAudio
     static esp_bd_addr_t avrcAddress;
 
     void play();
-    void pause();
+    static void pause();
     void next();
     void previous();
 
@@ -87,6 +87,8 @@ class btAudio
     static void reconnectTimeoutCB(void*);
 
     static void connectTimeoutCB(void*);
+
+    static void disconnect_static();
 
     // static function causes a static infection of variables
     static void i2sCallback(const uint8_t *data, uint32_t len);

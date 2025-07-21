@@ -1246,17 +1246,17 @@ void deleteDevice(uint8_t* device)
 
 void disconnect()
 {
+    // Turn connection "off" so phone doesn't reconnect immediately
+    disconnectTime = millis();
+    waitingToSetConnectable = true;
+    setConnectable(false);
+
     BTTrackUpdateMsg msg;
     msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_DISCONNECT;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 
     //connected = false;
     memset(devices.devices.connected, 0, 6);
-
-    // Turn connection "off" so phone doesn't reconnect immediately
-    disconnectTime = millis();
-    waitingToSetConnectable = true;
-    setConnectable(false);
 }
 
 void skipForward()

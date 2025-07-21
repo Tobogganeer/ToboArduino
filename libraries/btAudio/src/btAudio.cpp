@@ -208,12 +208,13 @@ void btAudio::connect(esp_bd_addr_t bda)
     esp_timer_start_once(connectTimer, CONNECT_TIMEOUT_MS * 1000);
 }
 
-void btAudio::disconnect()
+void btAudio::disconnect_static()
 {
     esp_timer_stop(reconnectTimer);
     esp_timer_stop(connectTimer);
     reconnecting = false;
 
+    pause();
     esp_a2d_sink_disconnect(_address);
     memset(deviceList.connected, 0, sizeof(esp_bd_addr_t));
     saveDevices(&deviceList);
@@ -226,6 +227,14 @@ void btAudio::disconnect()
     album = "";
     totalTrackDurationMS = 0;
     sourceDeviceName = "";
+
+    delay(10);
+    esp_a2d_sink_disconnect(_address);
+}
+
+void btAudio::disconnect()
+{
+    disconnect_static();
 }
 
 void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
@@ -244,6 +253,12 @@ void btAudio::a2d_cb(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param)
                     esp_timer_stop(reconnectTimer);
                     esp_timer_stop(connectTimer);
                     reconnecting = false;
+
+                    if (!btAudio::_connectable)
+                    {
+                        disconnect_static();
+                        return;
+                    }
 
                     ESP_LOGI("btAudio", "Connected to BT device: %d %d %d %d %d %d", _address[0], _address[1], _address[2], _address[3], _address[4], _address[5]);
 
@@ -560,7 +575,7 @@ void btAudio::i2sCallback(const uint8_t *data, uint32_t len)
 
 void btAudio::volume(float vol)
 {
-    _vol = constrain(vol, 0, 1);
+    _vol = constrain(vol, 0.0F, 1.0F);
 }
 
 
@@ -569,29 +584,29 @@ void btAudio::volume(float vol)
 
 void btAudio::play()
 {
-    if (!avrcConnected) return;
     esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_PLAY, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    delay(100);
     esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_PLAY, ESP_AVRC_PT_CMD_STATE_RELEASED);
 }
 
 void btAudio::pause()
 {
-    if (!avrcConnected) return;
     esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_PAUSE, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    delay(100);
     esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_PAUSE, ESP_AVRC_PT_CMD_STATE_RELEASED);
 }
 
 void btAudio::next()
 {
-    if (!avrcConnected) return;
     esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_FORWARD, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    delay(100);
     esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_FORWARD, ESP_AVRC_PT_CMD_STATE_RELEASED);
 }
 
 void btAudio::previous()
 {
-    if (!avrcConnected) return;
     esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_BACKWARD, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    delay(100);
     esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_BACKWARD, ESP_AVRC_PT_CMD_STATE_RELEASED);
 }
 
@@ -701,10 +716,12 @@ void btAudio::swapDevices(PairedDevices *devices, uint8_t a, uint8_t b)
     memcpy(devices->deviceNames[b], swapName, MAX_DEVICE_NAME_LENGTH);
 
     // Swap favourite, if applicable
+    /*
     if (devices->favourite == a)
         devices->favourite = b;
     else if (devices->favourite == b)
         devices->favourite = a;
+    */
 }
 
 void btAudio::moveDeviceUp(PairedDevices *devices, esp_bd_addr_t bda)
@@ -717,8 +734,8 @@ void btAudio::moveDeviceUp(PairedDevices *devices, esp_bd_addr_t bda)
         return;
     }
 
-    // Check if device is already #1 (favourite) or #2 (first paired after favourite)
-    if (deviceIndex <= 1)
+    // Check if device is already #1 (favourite)
+    if (deviceIndex == 0)
         return;
 
     swapDevices(devices, deviceIndex, deviceIndex - 1);
