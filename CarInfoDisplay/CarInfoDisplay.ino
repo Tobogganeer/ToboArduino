@@ -8,6 +8,9 @@
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <CarComms.h>
+#include <Rotary.h>
+#include <Button2.h>
+#include <Preferences.h>
 
 // #ifdef U8X8_HAVE_HW_SPI
 // #include <SPI.h>
@@ -51,13 +54,60 @@ long lastDisplayTime;
 #define FONT_SMALL u8g2_font_5x7_tr
 #define FONT_TINY u8g2_font_tiny5_tr
 
+#define ROTARY_PIN1 D3
+#define ROTARY_PIN2 D4
+#define ROTARY_BUTTON D5
+
+#define CLICKS_PER_ROTATION 4
+
+#define PREF_NAMESPACE "display"
+
+// TODO: Choose actual pins
+#define SVC_LED_PIN 0
+#define TEMP_LED_PIN 0 // Coolant temp
+#define BUZZER_PIN 0
+#define BUZZER_ENABLE_PIN 0 // Switch to toggle on/off
+
+// TODO: Buzzer switch
+// TODO: Backup buzzer/beeper
+// TODO: Backup beeper display
+
 char buffer[128];
+
+Rotary dial;
+Button2 dialButton;
+Preferences preferences;
+
+CarInfoMsg lastInfo;
+
+// Settings
+bool serviceSoonAlert = true;
+bool serviceSoonLED = true;
+bool highCoolantTempAlert = true;
+bool highCoolantTempLED = true;
+bool doorOpenAlert = true;
+bool trunkOpenAlert = true;
+
+uint32_t nextServiceKM;
+
+#define SERVICE_SOON_KM_THRESHOLD 500
+
+/*
+
+    preferences.begin(PREF_NAMESPACE, true); // second arg is "read-only"
+    value = preferences.getInt("key", defaultValue);
+    preferences.end();
+
+    preferences.begin(PREF_NAMESPACE, false); // second arg is "read-only"
+    preferences.putInt("key", value);
+    preferences.end();
+*/
 
 void setup(void)
 {
     u8g2.begin();
     comms.begin();
-    comms.receiveTypeMask = CarDataType::ID_CARINFO;
+    comms.receiveTypeMask = CarDataType::ID_CARINFO | CarDataType::ID_REVERSEPROXIMITY | CarDataType::ID_BUZZER;
 
     u8g2.clearBuffer();
 
@@ -66,6 +116,47 @@ void setup(void)
     u8g2.print("System booting...");
 
     u8g2.sendBuffer();
+
+    initDial();
+    loadSettings();
+}
+
+void initDial()
+{
+    dial.begin(ROTARY_PIN1, ROTARY_PIN2, CLICKS_PER_ROTATION);
+    dial.setLeftRotationHandler(rotateLeft);
+    dial.setRightRotationHandler(rotateRight);
+
+    dialButton.begin(ROTARY_BUTTON);
+    dialButton.setTapHandler(click);
+    //dialButton.setClickHandler(click);
+    //dialButton.setLongClickDetectedHandler(longClick);
+}
+
+void loadSettings()
+{
+    preferences.begin(PREF_NAMESPACE, true); // second arg is "read-only"
+    serviceSoonAlert = preferences.getBool("alert_svc", true);
+    serviceSoonLED = preferences.getBool("led_svc", true);
+    highCoolantTempAlert = preferences.getBool("alert_temp", true);
+    highCoolantTempLED = preferences.getBool("led_temp", true);
+    doorOpenAlert = preferences.getBool("alert_door", true);
+    trunkOpenAlert = preferences.getBool("alert_trunk", true);
+    nextServiceKM = preferences.getUInt("next_svc", 0);
+    preferences.end();
+}
+
+void saveSettings()
+{
+    preferences.begin(PREF_NAMESPACE, false); // second arg is "read-only"
+    preferences.putBool("alert_svc", serviceSoonAlert);
+    preferences.putBool("led_svc", serviceSoonLED);
+    preferences.putBool("alert_temp", highCoolantTempAlert);
+    preferences.putBool("led_temp", highCoolantTempLED);
+    preferences.putBool("alert_door", doorOpenAlert);
+    preferences.putBool("alert_trunk", trunkOpenAlert);
+    preferences.putUInt("next_svc", nextServiceKM);
+    preferences.end();
 }
 
 void displayInfo(CarInfoMsg& info)
@@ -138,19 +229,49 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
 {
     if (type == CarDataType::ID_CARINFO)
     {
-        CarInfoMsg info;
-        memcpy(&info, data, sizeof(CarInfoMsg));
-        displayInfo(info);
-        /*  
-        CarInfoMsg* info = (CarInfoMsg*)data;
-        Serial.print("Got data. RPM: ");
-        Serial.print(info->rpm);
-        Serial.print(", Speed:");
-        Serial.println(info->speed);
+        memcpy(&lastInfo, data, sizeof(CarInfoMsg));
+        displayInfo(lastInfo);
+    }
+    else if (type == CarDataType::ID_REVERSEPROXIMITY)
+    {
+        /*
+        typedef struct ReverseProximityMsg {
+            uint16_t leftmostDistance; // Driver side
+            uint16_t middleLeftDistance;
+            uint16_t middleRightDistance;
+            uint16_t rightmostDistance; // Passenger side
+        } ReverseProximityMsg;
+        */
+    }
+    else if (type == CarDataType::ID_BUZZER)
+    {
+        /*
+        typedef struct BuzzerMsg {
+            uint32_t frequency1;
+            uint32_t frequency2;
+            uint16_t duration;
+        } BuzzerMsg;
         */
     }
 }
 
 void loop(void)
 {
+    dial.loop();
+    dialButton.loop();
+}
+
+void rotateLeft(Rotary& dial)
+{
+    //log_i("Left");
+}
+
+void rotateRight(Rotary& dial)
+{
+    //log_i("Right");
+}
+
+void click(Button2& btn)
+{
+    //log_i("Click");
 }
