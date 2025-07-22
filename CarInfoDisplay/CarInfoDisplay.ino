@@ -64,9 +64,18 @@ long lastDisplayTime;
 
 // TODO: Choose actual pins
 #define SVC_LED_PIN 0
-#define TEMP_LED_PIN 0 // Coolant temp
+#define TEMP_LED_PIN 0  // Coolant temp
 #define BUZZER_PIN 0
-#define BUZZER_ENABLE_PIN 0 // Switch to toggle on/off
+#define BUZZER_ENABLE_PIN 0  // Switch to toggle on/off
+
+enum State
+{
+    STATE_BOOTING,
+    STATE_DISPLAY,
+    STATE_REVERSING,
+    STATE_COOLANT_WARNING,
+    STATE_DOORS
+};
 
 // TODO: Buzzer switch
 // TODO: Backup buzzer/beeper
@@ -80,6 +89,8 @@ Preferences preferences;
 
 CarInfoMsg lastInfo;
 
+int state = STATE_BOOTING;
+
 // Settings
 bool serviceSoonAlert = true;
 bool serviceSoonLED = true;
@@ -90,7 +101,17 @@ bool trunkOpenAlert = true;
 
 uint32_t nextServiceKM;
 
+int serviceLEDState = LOW;
+int coolantLEDState = LOW;
+
+bool serviceSoon;
+bool coolantTempHigh;
+// bool doorOpen; // We can read these directly from lastInfo;
+// bool trunkOpen;
+// bool reversing;
+
 #define SERVICE_SOON_KM_THRESHOLD 500
+#define COOLANT_TEMP_HIGH_THRESHOLD 105  // Operating temp is ~91
 
 /*
 
@@ -109,6 +130,15 @@ void setup(void)
     comms.begin();
     comms.receiveTypeMask = CarDataType::ID_CARINFO | CarDataType::ID_REVERSEPROXIMITY | CarDataType::ID_BUZZER;
 
+    bootingDisplay();
+
+    initPins();
+    initDial();
+    loadSettings();
+}
+
+void bootingDisplay()
+{
     u8g2.clearBuffer();
 
     u8g2.setCursor(6, 38);
@@ -116,9 +146,14 @@ void setup(void)
     u8g2.print("System booting...");
 
     u8g2.sendBuffer();
+}
 
-    initDial();
-    loadSettings();
+void initPins()
+{
+    pinMode(SVC_LED_PIN, OUTPUT);
+    pinMode(TEMP_LED_PIN, OUTPUT);
+    pinMode(BUZZER_PIN, OUTPUT);
+    pinMode(BUZZER_ENABLE_PIN, INPUT_PULLUP);
 }
 
 void initDial()
@@ -135,7 +170,7 @@ void initDial()
 
 void loadSettings()
 {
-    preferences.begin(PREF_NAMESPACE, true); // second arg is "read-only"
+    preferences.begin(PREF_NAMESPACE, true);  // second arg is "read-only"
     serviceSoonAlert = preferences.getBool("alert_svc", true);
     serviceSoonLED = preferences.getBool("led_svc", true);
     highCoolantTempAlert = preferences.getBool("alert_temp", true);
@@ -148,7 +183,7 @@ void loadSettings()
 
 void saveSettings()
 {
-    preferences.begin(PREF_NAMESPACE, false); // second arg is "read-only"
+    preferences.begin(PREF_NAMESPACE, false);  // second arg is "read-only"
     preferences.putBool("alert_svc", serviceSoonAlert);
     preferences.putBool("led_svc", serviceSoonLED);
     preferences.putBool("alert_temp", highCoolantTempAlert);
@@ -157,6 +192,58 @@ void saveSettings()
     preferences.putBool("alert_trunk", trunkOpenAlert);
     preferences.putUInt("next_svc", nextServiceKM);
     preferences.end();
+}
+
+void updateAlertState()
+{
+    serviceSoon = false;
+    // Make sure both have valid data
+    if (lastInfo.odometer != 0 && nextServiceKM != 0)
+    {
+        uint32_t distanceToService = nextServiceKM - lastInfo.odometer;
+        needsService = distanceToService < SERVICE_SOON_KM_THRESHOLD;
+    }
+
+    coolantTempHigh = info.coolantTemp > COOLANT_TEMP_HIGH_THRESHOLD;
+
+    // Service LED
+    // TODO: Check if LOW == 0 and HIGH == 1
+    if (serviceSoonLED)
+    {
+        if (serviceSoon != serviceLEDState)
+        {
+            serviceLEDState = serviceSoon;
+            digitalWrite(SVC_LED_PIN, serviceLEDState);
+        }
+    }
+    else
+    {
+        // Check if light is on and we've disabled the setting
+        if (serviceLEDState == HIGH)
+        {
+            serviceLEDState = LOW;
+            digitalWrite(SVC_LED_PIN, serviceLEDState);
+        }
+    }
+
+    // Coolant temp LED
+    if (highCoolantTempLED)
+    {
+        if (coolantTempHigh != coolantLEDState)
+        {
+            coolantLEDState = coolantTempHigh;
+            digitalWrite(TEMP_LED_PIN, coolantLEDState);
+        }
+    }
+    else
+    {
+        // Check if light is on and we've disabled the setting
+        if (coolantLEDState == HIGH)
+        {
+            coolantLEDState = LOW;
+            digitalWrite(TEMP_LED_PIN, coolantLEDState);
+        }
+    }
 }
 
 void displayInfo(CarInfoMsg& info)
@@ -222,6 +309,17 @@ void displayInfo(CarInfoMsg& info)
     u8g2.setCursor(128 - ALIGN_RIGHT(buffer), 35);
     u8g2.print(buffer);
 
+    // Service
+    u8g2.setFont(FONT_TINY);
+    u8g2.setCursor(80, 50);
+    u8g2.print("Service");
+    if (info.odometer != 0 && nextServiceKM != 0)
+        sprintf(buffer, "%dkm", nextServiceKM - info.odometer);
+    else
+        sprint(buffer, "----km");
+    u8g2.setCursor(126 - ALIGN_RIGHT(buffer), 62);
+    u8g2.print(buffer);
+
     u8g2.sendBuffer();
 }
 
@@ -229,6 +327,8 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
 {
     if (type == CarDataType::ID_CARINFO)
     {
+        if (state == STATE_BOOTING)
+            state = STATE_DISPLAY;  // TODO: function to set state and handle switching display?
         memcpy(&lastInfo, data, sizeof(CarInfoMsg));
         displayInfo(lastInfo);
     }
@@ -259,6 +359,7 @@ void loop(void)
 {
     dial.loop();
     dialButton.loop();
+    updateAlertState();
 }
 
 void rotateLeft(Rotary& dial)
