@@ -1257,6 +1257,7 @@ void disconnect()
 void skipForward()
 {
     BTTrackUpdateMsg msg;
+    memset(&msg, 0, sizeof(BTTrackUpdateMsg)); // 0-initialize so other skip fields are empty
     msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
     msg.skipUpdate.forward = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
@@ -1265,6 +1266,7 @@ void skipForward()
 void skipBackward()
 {
     BTTrackUpdateMsg msg;
+    memset(&msg, 0, sizeof(BTTrackUpdateMsg)); // 0-initialize so other skip fields are empty
     msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
     msg.skipUpdate.reverse = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
@@ -1273,6 +1275,7 @@ void skipBackward()
 void pause()
 {
     BTTrackUpdateMsg msg;
+    memset(&msg, 0, sizeof(BTTrackUpdateMsg)); // 0-initialize so other skip fields are empty
     msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
     msg.skipUpdate.pause = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
@@ -1283,6 +1286,7 @@ void pause()
 void play()
 {
     BTTrackUpdateMsg msg;
+    memset(&msg, 0, sizeof(BTTrackUpdateMsg)); // 0-initialize so other skip fields are empty
     msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
     msg.skipUpdate.play = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
