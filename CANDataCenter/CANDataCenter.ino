@@ -1027,7 +1027,7 @@ void handleMSMessage()
         */
         Serial.print("Inst fuel consump: ");
         uint16_t inst = convert(rxBuf[3], rxBuf[2]).ushortVal;
-        if (inst == 0xFFFE)
+        if (inst >= 0xFFF0)
         {
             Serial.println("---");
             data.fuelEcoInst = 0.0f;
