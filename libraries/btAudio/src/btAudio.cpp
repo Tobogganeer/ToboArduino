@@ -179,10 +179,6 @@ void btAudio::reconnect()
         return;
     }
 
-    // Make sure favourite is first
-    if (deviceList.favourite > 0)
-        swapDevices(&deviceList, 0, deviceList.favourite);
-
     reconnectIndex = 0;
     reconnecting = true;
     tryReconnectNextDevice();
@@ -649,7 +645,7 @@ typedef struct PairedDevices {
     esp_bd_addr_t addresses[MAX_PAIRED_DEVICES]; // 5 x 6 = 30 bytes
     char deviceNames[MAX_PAIRED_DEVICES][MAX_DEVICE_NAME_LENGTH]; // 5 x 32 = 160
     uint8_t count;
-    uint8_t favourite;
+    esp_bd_addr_t connected;
 } PairedDevices;
 
 */
@@ -714,14 +710,6 @@ void btAudio::swapDevices(PairedDevices *devices, uint8_t a, uint8_t b)
     memcpy(swapName, devices->deviceNames[a], MAX_DEVICE_NAME_LENGTH);
     memcpy(devices->deviceNames[a], devices->deviceNames[b], MAX_DEVICE_NAME_LENGTH);
     memcpy(devices->deviceNames[b], swapName, MAX_DEVICE_NAME_LENGTH);
-
-    // Swap favourite, if applicable
-    /*
-    if (devices->favourite == a)
-        devices->favourite = b;
-    else if (devices->favourite == b)
-        devices->favourite = a;
-    */
 }
 
 void btAudio::moveDeviceUp(PairedDevices *devices, esp_bd_addr_t bda)
@@ -753,7 +741,8 @@ void btAudio::moveDeviceDown(PairedDevices *devices, esp_bd_addr_t bda)
     }
 
     // Check if device is already last or is the favourite (fav is always at the top)
-    if (deviceIndex == devices->count - 1 || deviceIndex == devices->favourite)
+    // EDIT: Let favourite be moved down now
+    if (deviceIndex == devices->count - 1)// || deviceIndex == 0)
         return;
 
     swapDevices(devices, deviceIndex, deviceIndex + 1);
@@ -799,6 +788,5 @@ void btAudio::favouriteDevice(PairedDevices *devices, esp_bd_addr_t bda)
         deviceIndex--;
     }
 
-    devices->favourite = 0;
     saveDevices(devices);
 }

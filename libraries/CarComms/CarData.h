@@ -117,7 +117,6 @@ typedef struct BTInfoMsg {
 			uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
 			char deviceNames[5][32]; // 5 x 32 = 160
 			uint8_t count; // 161
-			uint8_t favourite; // 162
 			uint8_t connected[6]; // 168
 			bool reconnecting;
 		} devices;

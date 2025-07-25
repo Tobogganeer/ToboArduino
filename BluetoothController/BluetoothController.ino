@@ -27,9 +27,15 @@ CarComms comms(handleCarData);
 //#define DEBUG
 
 #ifndef DEBUG
-#define log_i(...) {}
-#define log_w(...) {}
-#define log_e(...) {}
+#define log_i(...) \
+    { \
+    }
+#define log_w(...) \
+    { \
+    }
+#define log_e(...) \
+    { \
+    }
 #endif
 
 typedef uint8_t State;
@@ -165,7 +171,7 @@ void loop()
 
     // Check if we are waiting for a state switch
     if (stateSwitchTimeMS != 0)
-    {   
+    {
         // We set stateSwitchTimeMS to millis() + delay, so if it is less than current time it has elapsed
         if (stateSwitchTimeMS < millis())
         {
@@ -422,7 +428,6 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                     // uint8_t addresses[5][6]; // 5 x 6 = 30 bytes
                     // char deviceNames[5][32]; // 5 x 32 = 160
                     // uint8_t count; // 161
-                    // uint8_t favourite; // 162
                     // uint8_t connected[6]; // 168, address of connected
                     // bool reconnecting;
                     break;
@@ -957,7 +962,7 @@ void device_click()
             }
             break;
         case SETTINGS_DEVICE_FAVOURITE:
-            if (devices.devices.favourite != selectedDevice)
+            if (selectedDevice != 0)
             {
                 favourite(devices.devices.addresses[selectedDevice]);
                 switchStateWithIntermediate(STATE_SETTINGS_DEVICE, STATE_TRANSITION_MESSAGE, 1000);
@@ -980,15 +985,16 @@ void device_click()
             }
         case SETTINGS_DEVICE_MOVE_UP:
             {
-                // Don't move favourite/top device
+                // Don't move top device
                 if (selectedDevice == 0)
                     break;
 
                 // Favourite this device if we are at position #2
-                if (selectedDevice == 1)
-                    favourite(devices.devices.addresses[selectedDevice]);
-                else
-                    moveUp(devices.devices.addresses[selectedDevice]);
+                // if (selectedDevice == 1)
+                //     favourite(devices.devices.addresses[selectedDevice]);
+                // else
+                // EDIT: Moving up to pos 1 will favourite now
+                moveUp(devices.devices.addresses[selectedDevice]);
                 selectedDevice--;
                 switchStateWithIntermediate(STATE_SETTINGS_DEVICE, STATE_TRANSITION_MESSAGE, 1000);
                 char message[21];
@@ -998,8 +1004,8 @@ void device_click()
             }
         case SETTINGS_DEVICE_MOVE_DOWN:
             {
-                // Don't move favourite or bottom device
-                if (selectedDevice == 0 || selectedDevice == 4)
+                // Don't move bottom device
+                if (selectedDevice == 4)
                     break;
 
                 moveDown(devices.devices.addresses[selectedDevice]);
@@ -1051,7 +1057,7 @@ void deviceSettings_display()
             lcd.print("Connect");
 
         lcd.setCursor(1, 1);
-        if (!devices.devices.favourite == selectedDevice)
+        if (selectedDevice != 0)
             lcd.print("Favourite");
         else
             lcd.print("<already favourite>");
@@ -1069,16 +1075,15 @@ void deviceSettings_display()
         lcd.print("^^^");
 
         lcd.setCursor(1, 1);
-        // TODO: Favourite device if at index 1
         if (selectedDevice > 0)
             lcd.print("Move up");
         else
             lcd.print("<already at top>");
 
         lcd.setCursor(1, 2);
-        if (selectedDevice == 0)
-            lcd.print("<cannot move fav.>");
-        else if (selectedDevice == 4)
+        // if (selectedDevice == 0)
+        //     lcd.print("<cannot move fav.>");
+        if (selectedDevice == 4)
             lcd.print("<already at bottom>");
         else
             lcd.print("Move down");
