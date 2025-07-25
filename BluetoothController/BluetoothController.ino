@@ -56,8 +56,6 @@ enum : uint8_t
 #define MESSAGE_DISCONNECT_TIME 4000
 #define MESSAGE_CONNECT_TIME 2000
 
-#define DISCONNECT_SET_UNCONNECTABLE_TIME 1000 // When we disconnect, make audio module unconnectable for this time
-
 #define ROTARY_PIN1 D3
 #define ROTARY_PIN2 D4
 #define ROTARY_BUTTON D5
@@ -82,9 +80,6 @@ State nextState;
 long stateSwitchTimeMS;
 bool switchingState;
 long lastStateSwitchTimeMS;
-
-bool waitingToSetConnectable;
-long disconnectTime;
 
 BTInfoMsg devices;
 BTInfoMsg songInfo;
@@ -177,13 +172,6 @@ void loop()
             stateSwitchTimeMS = 0;
             stateTimerCB(nullptr);
         }
-    }
-
-    // Should we turn connection back on?
-    if (waitingToSetConnectable && (disconnectTime + DISCONNECT_SET_UNCONNECTABLE_TIME) < millis())
-    {
-        waitingToSetConnectable = false;
-        setConnectable(true);
     }
 }
 
@@ -956,14 +944,15 @@ void device_click()
             }
             else
             {
-                disconnect();
+                //disconnect();
                 switchStateInstant(STATE_CONNECTING);
                 displayMessage("Connecting to", devices.devices.deviceNames[selectedDevice], true);
                 // I don't feel like working out the logic for connecting once the radio is back on
                 //  so I'll just call setConnectable from here
-                delay(DISCONNECT_SET_UNCONNECTABLE_TIME); // Give time to disconnect and turn connection back on
-                setConnectable(true);
-                delay(250);
+                //delay(DISCONNECT_SET_UNCONNECTABLE_TIME); // Give time to disconnect and turn connection back on
+                //setConnectable(true);
+                //delay(250);
+                // BTAudio will disconnect from current device
                 connect(devices.devices.addresses[selectedDevice]);
             }
             break;
@@ -977,11 +966,11 @@ void device_click()
             break;
         case SETTINGS_DEVICE_DELETE:
             {
-                // If connected, disconnect first
+                deleteDevice(devices.devices.addresses[selectedDevice]);
+
+                // If connected, disconnect
                 if (memcmp(devices.devices.addresses[selectedDevice], devices.devices.connected, 6) == 0)
                     disconnect();
-
-                deleteDevice(devices.devices.addresses[selectedDevice]);
 
                 // Go back to main page if this is the last device
                 State next = devices.devices.count == 1 ? STATE_SETTINGS_MAIN : STATE_SETTINGS_DEVICE_LIST;
@@ -1247,10 +1236,11 @@ void deleteDevice(uint8_t* device)
 void disconnect()
 {
     // Turn connection "off" so phone doesn't reconnect immediately
+    /*
     disconnectTime = millis();
     waitingToSetConnectable = true;
     setConnectable(false);
-
+    */
     BTTrackUpdateMsg msg;
     msg.type = BTTrackUpdateType::BT_UPDATE_DEVICE_DISCONNECT;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));

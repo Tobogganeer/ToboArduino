@@ -11,12 +11,38 @@ esp_timer_handle_t sendDeviceInfoTimer;
 
 uint8_t playStatus;
 
-#define METADATA_REFRESH_TIME_MS 3000 // Also refreshed when track changes
+#define METADATA_REFRESH_TIME_MS 3000  // Also refreshed when track changes
 #define SEND_DEVICE_INFO_TIME_MS 5000
+
+#define DISCONNECT_RESET_WAIT_TIME_MS 1500  // How long to wait before restarting BT
 
 // https://www.youtube.com/watch?v=QixtxaAda18
 
 #define DEBUG
+
+// SW_CPU_RESET
+// esp_restart();
+// esp_reset_reason_t reason = esp_reset_reason();
+// ESP_RST_SW
+/*
+        ESP_RST_UNKNOWN,    //!< Reset reason can not be determined
+        ESP_RST_POWERON,    //!< Reset due to power-on event
+        ESP_RST_EXT,        //!< Reset by external pin (not applicable for ESP32)
+        ESP_RST_SW,         //!< Software reset via esp_restart
+        ESP_RST_PANIC,      //!< Software reset due to exception/panic
+        ESP_RST_INT_WDT,    //!< Reset (software or hardware) due to interrupt watchdog
+        ESP_RST_TASK_WDT,   //!< Reset due to task watchdog
+        ESP_RST_WDT,        //!< Reset due to other watchdogs
+        ESP_RST_DEEPSLEEP,  //!< Reset after exiting deep sleep mode
+        ESP_RST_BROWNOUT,   //!< Brownout reset (software or hardware)
+        ESP_RST_SDIO,       //!< Reset over SDIO
+        ESP_RST_USB,        //!< Reset by USB peripheral
+        ESP_RST_JTAG,       //!< Reset by JTAG
+        ESP_RST_EFUSE,      //!< Reset due to efuse error
+        ESP_RST_PWR_GLITCH, //!< Reset due to power glitch detected
+        ESP_RST_CPU_LOCKUP, //!< Reset due to CPU lock up (double exception)
+    } esp_reset_reason_t;
+    */
 
 void setup()
 {
@@ -25,19 +51,30 @@ void setup()
     esp_log_level_set("*", ESP_LOG_INFO);
 #endif
 
+    // Check if we restarted on purpose (to force bt disconnect)
+    bool restartedOnPurpose = esp_reset_reason() == ESP_RST_SW;
+    if (restartedOnPurpose)
+    {
+        // Honk shoo mimimimi
+        delay(DISCONNECT_RESET_WAIT_TIME_MS);
+    }
+
+    // Start receiving messages
+    comms.begin();
+    comms.receiveTypeMask = CarDataType::ID_BT_TRACK_UPDATE;
+
     // Streams audio data to the ESP32
     audio.begin();
-    audio.setDiscoverable(false); // Set non-discoverable by default - user will go into settings and pair new device
+    audio.setDiscoverable(false);  // Set non-discoverable by default - user will go into settings and pair new device
+    audio.setConnectable(true);    // Connectable by default - just not broadcasting
 
     int ws = 16;
     int dout = 17;
     int bck = 5;
     audio.I2S(bck, dout, ws);
 
-    audio.volume(0.75f); // Quite loud at 10 (car volume) and we want to get rid of popping
-
-    comms.begin();
-    comms.receiveTypeMask = CarDataType::ID_BT_TRACK_UPDATE;
+    audio.volume(0.75f);  // Quite loud at 10 (car volume) and we want to get rid of popping
+    // TODO: Still popping when source volume is high - figure out why?
 
     // Start timer to refresh metadata
     esp_timer_create_args_t timerArgs = {
@@ -46,14 +83,14 @@ void setup()
     };
     esp_timer_create(&timerArgs, &refreshMetadataTimer);
     log_i("Start meta refresh timer");
-    esp_timer_start_periodic(refreshMetadataTimer, METADATA_REFRESH_TIME_MS * 1000); // Units are us
+    esp_timer_start_periodic(refreshMetadataTimer, METADATA_REFRESH_TIME_MS * 1000);  // Units are us
 
     esp_timer_create_args_t deviceInfoTimerArgs = {
         .callback = &sendDeviceInfo,
         .name = "sendDeviceInfoTimer"
     };
     esp_timer_create(&deviceInfoTimerArgs, &sendDeviceInfoTimer);
-    esp_timer_start_periodic(sendDeviceInfoTimer, SEND_DEVICE_INFO_TIME_MS * 1000); // Units are us
+    esp_timer_start_periodic(sendDeviceInfoTimer, SEND_DEVICE_INFO_TIME_MS * 1000);  // Units are us
 
     // "Subscribe" to callbacks
     audio.devicesSavedCallback = devicesSavedCallback;
@@ -67,8 +104,35 @@ void setup()
     // Give things a bit to initialize
     delay(500);
 
-    // Tries reconnecting to last 5 connected devices
-    audio.reconnect();
+    // Reconnect to last 5 devices, unless we shut down on purpose (to disconnect)
+    if (restartedOnPurpose)
+        continueConnecting();
+    else
+        audio.reconnect();
+}
+
+void continueConnecting()
+{
+    // Check if we have device saved
+    preferences.begin(PREF_NAMESPACE, true);
+    if (preferences.isKey("conn_addr"))
+    {
+        esp_bd_addr_t addr;
+        preferences.getBytes("conn_addr", addr, sizeof(esp_bd_addr_t));
+        // Check if it is an actual addr
+        bool blank = addr[0] == 0 && addr[1] == 0 && addr[2] == 0 && addr[3] == 0 && addr[4] == 0 && addr[5] == 0;
+        if (!blank)
+        {
+            preferences.end();
+            preferences.begin(PREF_NAMESPACE, false);  // Write blank address
+            memset(addr, 0, sizeof(esp_bd_addr_t));
+            preferences.putBytes("conn_addr", addr, sizeof(esp_bd_addr_t));
+
+            // Connect to device
+            audio.connect(addr);
+        }
+    }
+    preferences.end();
 }
 
 void refreshMetadata(void* arg)
@@ -108,7 +172,7 @@ void connectedCallback(const esp_bd_addr_t bda, const char* deviceName, int name
     msg.type = BTInfoType::BT_INFO_CONNECTED;
     memcpy(&msg.sourceDevice.address, &bda, sizeof(esp_bd_addr_t));
     memcpy(&msg.sourceDevice.deviceName, deviceName, min(nameLen, 32));
-    msg.sourceDevice.deviceName[31] = 0; // Null-terminate last character (name limit is 32 chars);
+    msg.sourceDevice.deviceName[31] = 0;  // Null-terminate last character (name limit is 32 chars);
     comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
 
     // Try to play audio when we connect
@@ -122,16 +186,16 @@ void disconnectedCallback(const esp_bd_addr_t bda, const char* deviceName, int n
     memcpy(&msg.sourceDevice.address, &bda, sizeof(esp_bd_addr_t));
     if (deviceName)
         memcpy(&msg.sourceDevice.deviceName, deviceName, min(nameLen, 32));
-    msg.sourceDevice.deviceName[31] = 0; // Null-terminate last character (name limit is 32 chars);
+    msg.sourceDevice.deviceName[31] = 0;  // Null-terminate last character (name limit is 32 chars);
     comms.send(CarDataType::ID_BT_INFO, (uint8_t*)&msg, sizeof(BTInfoMsg));
 }
 
 void copyMetadataString(uint8_t* dst, String src)
 {
-    uint maxLength = BT_SONG_INFO_MAX_STR_LEN - 1; // Leave room at the end
+    uint maxLength = BT_SONG_INFO_MAX_STR_LEN - 1;  // Leave room at the end
     int len = min(src.length(), maxLength);
     memcpy(dst, src.c_str(), len);
-    dst[len] = 0; // Null-terminate
+    dst[len] = 0;  // Null-terminate
 }
 
 void metadataUpdatedCallback()
@@ -160,7 +224,7 @@ void playStatusChangedCallback(esp_avrc_playback_stat_t status)
 
     playStatus = status;
 
-    refreshMetadata(nullptr); // Refresh meta when playback changes
+    refreshMetadata(nullptr);  // Refresh meta when playback changes
 }
 
 void trackChangedCallback()
@@ -171,7 +235,7 @@ void trackChangedCallback()
 
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, (uint8_t*)&msg, sizeof(BTTrackUpdateMsg));
 
-    refreshMetadata(nullptr); // Refresh meta when track changes
+    refreshMetadata(nullptr);  // Refresh meta when track changes
 }
 
 void playPositionChangedCallback(uint32_t playPosMS)
@@ -231,11 +295,17 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
             audio.setDiscoverable(msg->discoverable);
             break;
         case BT_UPDATE_DEVICE_CONNECT:
-            audio.connect(msg->device);
-            break;
+            //audio.connect(msg->device);
+            // Store address and then disconnect/restart
+            preferences.begin(PREF_NAMESPACE, false);
+            preferences.putBytes("conn_addr", msg->device, sizeof(esp_bd_addr_t));
+            preferences.end();
+            //break;
+            // Fall through
         case BT_UPDATE_DEVICE_DISCONNECT:
             // TODO: Should we compare msg->device to the current connected one?
             audio.disconnect();
+            esp_restart();
             break;
         case BT_UPDATE_SET_CONNECTABLE:
             audio.setConnectable(msg->connectable);
