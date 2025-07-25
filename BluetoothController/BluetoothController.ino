@@ -350,6 +350,9 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                     switch (msg->songUpdate.updateType)
                     {
                         case BT_SONG_POS_UPDATE_TRACK_CHANGE:
+                            // Track plays when it changes
+                            // TODO: Could the track stay paused? Like if you go backwards?
+                            playbackStatus = PLAYBACK_PLAYING;
                             displayMusic();
                             break;
                         case BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE:
