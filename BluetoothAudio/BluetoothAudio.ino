@@ -1,6 +1,7 @@
 #include <btAudio.h>
 #include <CarComms.h>
 #include "esp_timer.h"
+#include <Preferences.h>
 
 // Sets the name of the audio device
 btAudio audio = btAudio("Daveikis Mobile");
@@ -19,6 +20,9 @@ uint8_t playStatus;
 // https://www.youtube.com/watch?v=QixtxaAda18
 
 #define DEBUG
+
+#define PREF_NAMESPACE "bt_devices"
+static Preferences preferences;
 
 // SW_CPU_RESET
 // esp_restart();
