@@ -1284,6 +1284,7 @@ void pause()
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 
     playbackStatus = PLAYBACK_PAUSED;
+    displayMusic();
 }
 
 void play()
@@ -1295,6 +1296,7 @@ void play()
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 
     playbackStatus = PLAYBACK_PLAYING;
+    displayMusic();
 }
 
 void setDiscoverable(bool discoverable)

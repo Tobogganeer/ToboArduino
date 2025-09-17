@@ -267,6 +267,8 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
         return;
     }
 
+    log_i("Got message from controller: %d", type);
+
     BTTrackUpdateMsg* msg = (BTTrackUpdateMsg*)data;
     PairedDevices devices;
     audio.loadDevices(&devices);

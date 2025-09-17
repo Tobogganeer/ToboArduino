@@ -102,6 +102,7 @@ void btAudio::begin()
     esp_a2d_register_callback(a2d_cb);
 
     // set discoverable and connectable mode, wait to be connected
+    setConnectable(true);
     setDiscoverable(true);
 }
 
@@ -580,30 +581,34 @@ void btAudio::volume(float vol)
 
 void btAudio::play()
 {
-    esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_PLAY, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    esp_avrc_ct_send_passthrough_cmd(0, ESP_AVRC_PT_CMD_PLAY, ESP_AVRC_PT_CMD_STATE_PRESSED);
     delay(100);
-    esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_PLAY, ESP_AVRC_PT_CMD_STATE_RELEASED);
+    esp_avrc_ct_send_passthrough_cmd(0, ESP_AVRC_PT_CMD_PLAY, ESP_AVRC_PT_CMD_STATE_RELEASED);
+    log_i("Play");
 }
 
 void btAudio::pause()
 {
-    esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_PAUSE, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    esp_avrc_ct_send_passthrough_cmd(0, ESP_AVRC_PT_CMD_PAUSE, ESP_AVRC_PT_CMD_STATE_PRESSED);
     delay(100);
-    esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_PAUSE, ESP_AVRC_PT_CMD_STATE_RELEASED);
+    esp_avrc_ct_send_passthrough_cmd(0, ESP_AVRC_PT_CMD_PAUSE, ESP_AVRC_PT_CMD_STATE_RELEASED);
+    log_i("Pause");
 }
 
 void btAudio::next()
 {
-    esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_FORWARD, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    esp_avrc_ct_send_passthrough_cmd(0, ESP_AVRC_PT_CMD_FORWARD, ESP_AVRC_PT_CMD_STATE_PRESSED);
     delay(100);
-    esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_FORWARD, ESP_AVRC_PT_CMD_STATE_RELEASED);
+    esp_avrc_ct_send_passthrough_cmd(0, ESP_AVRC_PT_CMD_FORWARD, ESP_AVRC_PT_CMD_STATE_RELEASED);
+    log_i("Next");
 }
 
 void btAudio::previous()
 {
-    esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_BACKWARD, ESP_AVRC_PT_CMD_STATE_PRESSED);
+    esp_avrc_ct_send_passthrough_cmd(0, ESP_AVRC_PT_CMD_BACKWARD, ESP_AVRC_PT_CMD_STATE_PRESSED);
     delay(100);
-    esp_avrc_ct_send_passthrough_cmd(nextTL(), ESP_AVRC_PT_CMD_BACKWARD, ESP_AVRC_PT_CMD_STATE_RELEASED);
+    esp_avrc_ct_send_passthrough_cmd(0, ESP_AVRC_PT_CMD_BACKWARD, ESP_AVRC_PT_CMD_STATE_RELEASED);
+    log_i("Previous");
 }
 
 

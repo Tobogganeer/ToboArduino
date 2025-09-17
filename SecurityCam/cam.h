@@ -55,6 +55,19 @@ bool cameraInit() {
 }
 
 bool takePicture() {
+
+    // Get time
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo))
+    {
+        Serial.println("Failed to obtain time");
+        return false;
+    }
+
+    // Only capture from 8am-11:59pm
+    if (timeinfo.tm_hour < 8)
+        return false;
+
     DBG("Taking picture now");
     camera_fb_t *fb = NULL;
     fb = esp_camera_fb_get();
@@ -67,12 +80,6 @@ bool takePicture() {
     DBG("Camera capture success");
 
     // Add timestamp to name
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo))
-    {
-        Serial.println("Failed to obtain time");
-        return false;
-    }
 
     // https://cplusplus.com/reference/ctime/strftime/
     char timestamp[32];
