@@ -12,11 +12,13 @@ void setup()
     swSerial.begin(9600);
     mp3.begin(swSerial, true); // Debug output is bool parameter
 
-    mp3.volume(30);  // Set volume to max
+    mp3.volume(10);  // Set volume to max
+    mp3.randomAll();
 }
 
 void loop()
 {
-    mp3.play(1);
-    delay(2000);
+    //mp3.play(random(3));
+    //mp3.randomAll();
+    //delay(4000);
 }
