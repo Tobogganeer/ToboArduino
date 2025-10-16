@@ -23,7 +23,7 @@ void setup()
     swSerial.begin(9600);
     mp3.begin(swSerial, true); // Debug output is bool parameter
 
-    mp3.volume(25);  // Set volume to max
+    mp3.volume(30);  // Set volume to max
     //mp3.randomAll();
 
     pinMode(redButton, INPUT_PULLUP);
@@ -40,6 +40,9 @@ void setup()
 
 void loop()
 {
+    digitalWrite(redButtonLED, digitalRead(redButton));
+    digitalWrite(blueButtonLED, !digitalRead(blueButton));
+
     if (millis() - lastPlayTime < 1000)
         return;
 
@@ -48,7 +51,7 @@ void loop()
         mp3.play(success);
         lastPlayTime = millis();
     }
-    if (digitalRead(blueButton) == LOW)
+    if (digitalRead(blueButton) == HIGH)
     {
         mp3.play(fail);
         lastPlayTime = millis();
