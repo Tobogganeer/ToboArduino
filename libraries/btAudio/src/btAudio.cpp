@@ -28,7 +28,7 @@ void (*btAudio::playStatusChangedCallback)(esp_avrc_playback_stat_t status);
 void (*btAudio::trackChangedCallback)();
 void (*btAudio::playPositionChangedCallback)(uint32_t playPosMS);
 
-static Preferences preferences;
+Preferences preferences;
 
 #define PREF_NAMESPACE "bt_devices"
 #define PREF_KEY "devices"
