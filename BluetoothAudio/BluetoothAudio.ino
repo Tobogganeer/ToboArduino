@@ -24,7 +24,7 @@ Preferences connectPreferences;
 
 // https://www.youtube.com/watch?v=QixtxaAda18
 
-#define DEBUG
+//#define DEBUG
 
 // SW_CPU_RESET
 // esp_restart();

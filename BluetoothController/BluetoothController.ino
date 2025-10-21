@@ -24,7 +24,7 @@ CarComms comms(handleCarData);
 #define PLAYBACK_REV_SEEK 4
 #define PLAYBACK_ERROR 0xFF
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG_ESP_PORT
 #define log_i(...) DEBUG_ESP_PORT.printf( __VA_ARGS__ )
@@ -323,7 +323,7 @@ void splashScreen()
     lcd.setCursor(3, 0);
     lcd.print("Goofy ah car");
     lcd.setCursor(7, 1);
-    lcd.print("V1.0");
+    lcd.print("V1.3");
     lcd.setCursor(3, 2);
     lcd.print("Evan Daveikis");
     lcd.setCursor(2, 3);
@@ -1278,7 +1278,7 @@ void pause()
     msg.skipUpdate.pause = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 
-    playbackStatus = PLAYBACK_PAUSED;
+    //playbackStatus = PLAYBACK_PAUSED;
     displayMusic();
 }
 
@@ -1290,7 +1290,7 @@ void play()
     msg.skipUpdate.play = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
 
-    playbackStatus = PLAYBACK_PLAYING;
+    //playbackStatus = PLAYBACK_PLAYING;
     displayMusic();
 }
 
