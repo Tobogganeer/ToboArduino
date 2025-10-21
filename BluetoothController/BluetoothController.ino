@@ -24,18 +24,12 @@ CarComms comms(handleCarData);
 #define PLAYBACK_REV_SEEK 4
 #define PLAYBACK_ERROR 0xFF
 
-//#define DEBUG
+#define DEBUG
 
-#ifndef DEBUG
-#define log_i(...) \
-    { \
-    }
-#define log_w(...) \
-    { \
-    }
-#define log_e(...) \
-    { \
-    }
+#ifdef DEBUG_ESP_PORT
+#define log_i(...) DEBUG_ESP_PORT.printf( __VA_ARGS__ )
+#else
+#define log_i(...)
 #endif
 
 typedef uint8_t State;
@@ -122,11 +116,11 @@ void setup()
     lcd.backlight();
 
     initIcons();  // Icons.h
+
     initDial();
 
 #ifdef DEBUG
     Serial.begin(115200);
-    esp_log_level_set("*", ESP_LOG_INFO);
 #endif
 
     switchStateInstant(STATE_SPLASHSCREEN);
@@ -134,6 +128,7 @@ void setup()
 
     comms.begin();
     comms.receiveTypeMask = CarDataType::ID_BT_TRACK_UPDATE | CarDataType::ID_BT_INFO;
+    log_i("Init comms\n");
 
     memset(blankLine, ' ', 20);  // Set first 20 chars to spaces
 }
@@ -230,7 +225,7 @@ void switchStateWithIntermediate(State endState, State intermediateState, uint32
 
 void afterStateSwitched(State from, State to)
 {
-    log_i("Switch from state %d to state %d", from, to);
+    log_i("Switch from state %d to state %d\n", from, to);
     selectedOption = 0;
 
     // Stuff like turn display back on from sleep
@@ -337,7 +332,7 @@ void splashScreen()
 
 void handleCarData(CarDataType type, const uint8_t* data, int len)
 {
-    //log_i("Got car data. Type: %d", type);
+    //log_i("Got car data. Type: %d\n", type);
 
     if (type == ID_BT_TRACK_UPDATE)
     {
@@ -358,7 +353,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
                         case BT_SONG_POS_UPDATE_PLAY_STATUS_CHANGE:
                             // msg->songUpdate.
                             // uint8_t playback; // esp_avrc_playback_stat_t
-                            log_i("Playback: %d", msg->songUpdate.playback);
+                            log_i("Playback: %d\n", msg->songUpdate.playback);
                             playbackStatus = msg->songUpdate.playback;
                             displayMusic();
                             break;
@@ -688,7 +683,7 @@ void printCentered(const char* text)
 
 void rotateLeft(Rotary& dial)
 {
-    log_i("Left");
+    log_i("Left\n");
 
     if (state == STATE_SLEEP)
         switchStateInstant(STATE_IDLE);
@@ -708,7 +703,7 @@ void rotateLeft(Rotary& dial)
 
 void rotateRight(Rotary& dial)
 {
-    log_i("Right");
+    log_i("Right\n");
 
     if (state == STATE_SLEEP)
         switchStateInstant(STATE_IDLE);
@@ -744,7 +739,7 @@ void selectedOptionChanged()
 
 void click(Button2& btn)
 {
-    log_i("Click");
+    log_i("Click\n");
 
     switch (state)
     {
@@ -1044,7 +1039,7 @@ void deviceSettings_display()
     // Make sure device is valid
     if (selectedDevice >= devices.devices.count)
     {
-        log_e("selectedDevice was >= devices.devices.count (selected a device that doesn't exist)!");
+        log_i("selectedDevice was >= devices.devices.count (selected a device that doesn't exist)!\n");
         switchStateInstant(STATE_SETTINGS_MAIN);
         return;
     }
@@ -1260,7 +1255,7 @@ void disconnect()
 void skipForward()
 {
     BTTrackUpdateMsg msg;
-    memset(&msg, 0, sizeof(BTTrackUpdateMsg)); // 0-initialize so other skip fields are empty
+    memset(&msg, 0, sizeof(BTTrackUpdateMsg));  // 0-initialize so other skip fields are empty
     msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
     msg.skipUpdate.forward = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
@@ -1269,7 +1264,7 @@ void skipForward()
 void skipBackward()
 {
     BTTrackUpdateMsg msg;
-    memset(&msg, 0, sizeof(BTTrackUpdateMsg)); // 0-initialize so other skip fields are empty
+    memset(&msg, 0, sizeof(BTTrackUpdateMsg));  // 0-initialize so other skip fields are empty
     msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
     msg.skipUpdate.reverse = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
@@ -1278,7 +1273,7 @@ void skipBackward()
 void pause()
 {
     BTTrackUpdateMsg msg;
-    memset(&msg, 0, sizeof(BTTrackUpdateMsg)); // 0-initialize so other skip fields are empty
+    memset(&msg, 0, sizeof(BTTrackUpdateMsg));  // 0-initialize so other skip fields are empty
     msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
     msg.skipUpdate.pause = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));
@@ -1290,7 +1285,7 @@ void pause()
 void play()
 {
     BTTrackUpdateMsg msg;
-    memset(&msg, 0, sizeof(BTTrackUpdateMsg)); // 0-initialize so other skip fields are empty
+    memset(&msg, 0, sizeof(BTTrackUpdateMsg));  // 0-initialize so other skip fields are empty
     msg.type = BTTrackUpdateType::BT_UPDATE_SKIP;
     msg.skipUpdate.play = true;
     comms.send(CarDataType::ID_BT_TRACK_UPDATE, &msg, sizeof(BTTrackUpdateMsg));

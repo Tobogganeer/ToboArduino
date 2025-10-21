@@ -1,6 +1,7 @@
 #include <btAudio.h>
 #include <CarComms.h>
 #include "esp_timer.h"
+#include <Preferences.h>
 
 // Sets the name of the audio device
 btAudio audio = btAudio("Daveikis Mobile");
@@ -15,6 +16,11 @@ uint8_t playStatus;
 #define SEND_DEVICE_INFO_TIME_MS 5000
 
 #define DISCONNECT_RESET_WAIT_TIME_MS 1500  // How long to wait before restarting BT
+
+Preferences connectPreferences;
+
+#define CONNECT_PREF_NAMESPACE "bt_devices"
+#define CONNECT_PREF_KEY "devices"
 
 // https://www.youtube.com/watch?v=QixtxaAda18
 
@@ -56,12 +62,14 @@ void setup()
     if (restartedOnPurpose)
     {
         // Honk shoo mimimimi
+        log_i("Waiting for bluetooth to disconnect...");
         delay(DISCONNECT_RESET_WAIT_TIME_MS);
     }
 
     // Start receiving messages
     comms.begin();
     comms.receiveTypeMask = CarDataType::ID_BT_TRACK_UPDATE;
+    log_i("Started CarComms");
 
     // Streams audio data to the ESP32
     audio.begin();
@@ -114,25 +122,26 @@ void setup()
 void continueConnecting()
 {
     // Check if we have device saved
-    preferences.begin(PREF_NAMESPACE, true);
-    if (preferences.isKey("conn_addr"))
+    connectPreferences.begin(CONNECT_PREF_NAMESPACE, true);
+    if (connectPreferences.isKey("conn_addr"))
     {
         esp_bd_addr_t addr;
-        preferences.getBytes("conn_addr", addr, sizeof(esp_bd_addr_t));
+        connectPreferences.getBytes("conn_addr", addr, sizeof(esp_bd_addr_t));
         // Check if it is an actual addr
         bool blank = addr[0] == 0 && addr[1] == 0 && addr[2] == 0 && addr[3] == 0 && addr[4] == 0 && addr[5] == 0;
         if (!blank)
         {
-            preferences.end();
-            preferences.begin(PREF_NAMESPACE, false);  // Write blank address
+            connectPreferences.end();
+            connectPreferences.begin(CONNECT_PREF_NAMESPACE, false);  // Write blank address
             memset(addr, 0, sizeof(esp_bd_addr_t));
-            preferences.putBytes("conn_addr", addr, sizeof(esp_bd_addr_t));
+            connectPreferences.putBytes("conn_addr", addr, sizeof(esp_bd_addr_t));
 
             // Connect to device
+            log_i("Continuing connection from before shutdown");
             audio.connect(addr);
         }
     }
-    preferences.end();
+    connectPreferences.end();
 }
 
 void refreshMetadata(void* arg)
@@ -299,9 +308,9 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
         case BT_UPDATE_DEVICE_CONNECT:
             //audio.connect(msg->device);
             // Store address and then disconnect/restart
-            preferences.begin(PREF_NAMESPACE, false);
-            preferences.putBytes("conn_addr", msg->device, sizeof(esp_bd_addr_t));
-            preferences.end();
+            connectPreferences.begin(CONNECT_PREF_NAMESPACE, false);
+            connectPreferences.putBytes("conn_addr", msg->device, sizeof(esp_bd_addr_t));
+            connectPreferences.end();
             //break;
             // Fall through
         case BT_UPDATE_DEVICE_DISCONNECT:
