@@ -1,0 +1,314 @@
+{
+  "uuid": "513bdeff133541f2d6004ff6061003e2",
+  "path": "Offline/AudioSwitcher",
+  "name": "AudioSwitcher",
+  "content": "",
+  "created_at": "2025-10-21 23:30:16",
+  "updated_at": "2025-10-22 11:55:13",
+  "stick": "",
+  "documents": [
+    {
+      "uuid": "7cb3b8e73a7b92e7d1a859aed3187e60",
+      "title": "Sheet_1",
+      "description": "",
+      "docType": "1",
+      "master": "",
+      "thumb": "/images/thumb-default.png",
+      "components": {
+        "31dd6b5c9f81419ca59d8eb431a6c88c": 2,
+        "4c3aec73235f4c67a7ca90375cd9d6b1": 1,
+        "aaf499e288cc48ab97216292911692ac": 6,
+        "a9aa2b14f188405792fa87ac344499a4": 1
+      },
+      "BOM": [
+        [
+          "Value",
+          "Quantity",
+          "Package",
+          "Components",
+          "CustomPara"
+        ],
+        [
+          "AUDIO_AUX",
+          1,
+          "PDIP-16_L19.7-W6.6-P2.54-LS7.6-BL",
+          "AUDIO_AUX",
+          {
+            "Manufacturer Part": "CD4052BMW/883",
+            "Manufacturer": "TI(德州仪器)",
+            "Supplier": "LCSC",
+            "Supplier Part": "C3208112"
+          }
+        ],
+        [
+          "AUDIO_MAIN",
+          1,
+          "PDIP-16_L19.7-W6.6-P2.54-LS7.6-BL",
+          "AUDIO_MAIN",
+          {
+            "Manufacturer Part": "CD4052BMW/883",
+            "Manufacturer": "TI(德州仪器)",
+            "Supplier": "LCSC",
+            "Supplier Part": "C3208112"
+          }
+        ],
+        [
+          "AUX",
+          1,
+          "AUX_FOOTPRINT",
+          "AUX",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "BT",
+          1,
+          "AUX_FOOTPRINT",
+          "BT",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "ESP8266 D1 Mini Throughhole",
+          1,
+          "ESP8266_THROUGHHOLE_FOOTPRINT",
+          "ESP",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "IOS",
+          1,
+          "AUX_FOOTPRINT",
+          "IOS",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "OUT",
+          1,
+          "AUX_FOOTPRINT",
+          "OUT",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "PC",
+          1,
+          "AUX_FOOTPRINT",
+          "PC",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "POWER",
+          1,
+          "HDR-M-2.54_1X2",
+          "POWER",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "LCSC",
+            "Supplier Part": "C124375"
+          }
+        ],
+        [
+          "USB",
+          1,
+          "AUX_FOOTPRINT",
+          "USB",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ]
+      ],
+      "updateTime": 1761146077,
+      "createTime": 1761103816,
+      "histories": [],
+      "created_at": "2025-10-21 23:30:16",
+      "updated_at": "2025-10-22 11:14:37"
+    },
+    {
+      "uuid": "116504c814c6b34fbc2486e056901f9d",
+      "puuid": "513bdeff133541f2d6004ff6061003e2",
+      "title": "PCB_AudioSwitcher",
+      "filename": "PCB_AudioSwitcher.json",
+      "description": "",
+      "docType": "3",
+      "master": "",
+      "thumb": "/images/thumb-default.png",
+      "components": {
+        "cf9582083e724c35ad6d791e3c197cdc": 6,
+        "70aa5812f21f4991bf427395d51849f4": 1,
+        "bd95e4f2ade549af8cbc7d9cfd463ba2": 1,
+        "821e1003094946d6a9513c6b7b54fe35": 2
+      },
+      "BOM": [
+        [
+          "Value",
+          "Quantity",
+          "Package",
+          "Components",
+          "CustomPara"
+        ],
+        [
+          "POWER",
+          1,
+          "HDR-M-2.54_1X2",
+          "J1",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "LCSC",
+            "Supplier Part": "C124375"
+          }
+        ],
+        [
+          "AUDIO_MAIN",
+          1,
+          "PDIP-16_L19.7-W6.6-P2.54-LS7.6-BL",
+          "U1",
+          {
+            "Manufacturer Part": "CD4052BMW/883",
+            "Manufacturer": "TI(德州仪器)",
+            "Supplier": "LCSC",
+            "Supplier Part": "C3208112"
+          }
+        ],
+        [
+          "AUDIO_AUX",
+          1,
+          "PDIP-16_L19.7-W6.6-P2.54-LS7.6-BL",
+          "U2",
+          {
+            "Manufacturer Part": "CD4052BMW/883",
+            "Manufacturer": "TI(德州仪器)",
+            "Supplier": "LCSC",
+            "Supplier Part": "C3208112"
+          }
+        ],
+        [
+          "BT",
+          1,
+          "AUX_FOOTPRINT",
+          "U3",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "PC",
+          1,
+          "AUX_FOOTPRINT",
+          "U4",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "AUX",
+          1,
+          "AUX_FOOTPRINT",
+          "U5",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "IOS",
+          1,
+          "AUX_FOOTPRINT",
+          "U6",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "USB",
+          1,
+          "AUX_FOOTPRINT",
+          "U7",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "OUT",
+          1,
+          "AUX_FOOTPRINT",
+          "U8",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ],
+        [
+          "ESP8266 D1 Mini Throughhole",
+          1,
+          "ESP8266_THROUGHHOLE_FOOTPRINT",
+          "U9",
+          {
+            "Manufacturer Part": "",
+            "Manufacturer": "",
+            "Supplier": "",
+            "Supplier Part": ""
+          }
+        ]
+      ],
+      "updateTime": 1761148513,
+      "createTime": 1761145894,
+      "histories": [],
+      "created_at": "2025-10-22 11:11:34",
+      "updated_at": "2025-10-22 11:55:13"
+    }
+  ],
+  "sort": [],
+  "title": "AudioSwitcher",
+  "foldername": "AudioSwitcher",
+  "schfilename": "AudioSwitcher.json",
+  "schfilemtime": 1761146077461
+}
