@@ -1,9 +1,11 @@
-void setup() {
-  // put your setup code here, to run once:
-
+void setup()
+{
+    pinMode(A0, INPUT);
+    Serial.begin(9600);
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-
+void loop()
+{
+    Serial.println(analogRead(A0));
+    delay(50);
 }
