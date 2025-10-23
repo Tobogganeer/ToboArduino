@@ -14,7 +14,7 @@ const int in4Pin = 10;
 const int enableBPin = 11;  // Spring compressor
 
 const int trigPin = 12;
-const int echoPin = A6;
+const int echoPin = 13;
 
 int bottleDistance;
 
@@ -22,14 +22,27 @@ enum MotorState
 {
     STOPPED = 0,
     FORWARD = 1,
-    REVERSE = -1
+    EXTENDED = 2,
+    REVERSE = -1,
+    RETRACTED = -2
 };
 
-MotorState springMotorState;
-MotorState doorMotorState;
+typedef struct Motor
+{
+    int in1Pin;
+    int in2Pin;
+    int enablePin;
+    MotorState state;
+    FireTimer timer;
 
-FireTimer springMotorTimer;
-FireTimer doorMotorTimer;
+    Motor(int in1, int in2, int enable)
+      : in1Pin(in1), in2Pin(in2), enablePin(enable), state(STOPPED), timer() {}
+} Motor;
+
+Motor springMotor(in3Pin, in4Pin, enableBPin);
+Motor doorMotor(in1Pin, in2Pin, enableAPin);
+
+FireTimer distanceTimer;
 
 void setup()
 {
@@ -49,6 +62,8 @@ void setup()
     pinMode(echoPin, INPUT);
     pinMode(trigPin, OUTPUT);
 
+    distanceTimer.begin(250);
+
     Serial.begin(9600);
 }
 
@@ -57,13 +72,66 @@ void loop()
     digitalWrite(fireLEDPin, digitalRead(fireButtonPin));    // Button and LED
     digitalWrite(fireRelayPin, !digitalRead(doorLeverPin));  // Door lever and fire relay
 
-    if (springMotorTimer.fire(false))
-    {
-      
-    }
+    updateMotor(springMotor);
+    updateMotor(doorMotor);
 
-    if (doorMotorTimer.fire(false))
+    if (distanceTimer.fire())
+        Serial.println(updateBottleDistance());
+}
+
+void updateMotor(Motor& motor)
+{
+    if (motor.timer.fire(false))
     {
+        switch (motor.state)
+        {
+            case STOPPED:  // First time
+                changeMotorState(motor, FORWARD);
+                motor.timer.update(500);
+                break;
+            case FORWARD:
+                changeMotorState(motor, EXTENDED);
+                motor.timer.update(1000);
+                break;
+            case REVERSE:
+                changeMotorState(motor, RETRACTED);
+                motor.timer.update(1000);
+                break;
+            case EXTENDED:
+                changeMotorState(motor, REVERSE);
+                motor.timer.update(500);
+                break;
+            case RETRACTED:
+                changeMotorState(motor, FORWARD);
+                motor.timer.update(500);
+                break;
+        }
+    }
+}
+
+void changeMotorState(Motor& motor, MotorState newState)
+{
+    motor.state = newState;
+
+    switch (newState)
+    {
+        case STOPPED:
+        case EXTENDED:
+        case RETRACTED:
+            digitalWrite(motor.in1Pin, LOW);
+            digitalWrite(motor.in2Pin, LOW);
+            digitalWrite(motor.enablePin, LOW);
+            break;
+        case FORWARD:
+            digitalWrite(motor.in1Pin, HIGH);
+            digitalWrite(motor.in2Pin, LOW);
+            digitalWrite(motor.enablePin, HIGH);
+            break;
+        case REVERSE:
+            digitalWrite(motor.in1Pin, LOW);
+            digitalWrite(motor.in2Pin, HIGH);
+            digitalWrite(motor.enablePin, HIGH);
+            break;
     }
 }
 
@@ -76,8 +144,8 @@ int updateBottleDistance()
     delayMicroseconds(10);
     digitalWrite(trigPin, LOW);
 
-    unsigned long echoDuration = pulseIn(echoPin, HIGH);
-    bottleDistance = (duration * 0.0343f) / 2;
+    unsigned long echoDuration = pulseIn(echoPin, HIGH, 50 * 1000); // 50ms max
+    bottleDistance = (echoDuration * 0.0343f) / 2;
 
     return bottleDistance;
 }
