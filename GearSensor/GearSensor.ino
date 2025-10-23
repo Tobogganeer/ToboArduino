@@ -55,6 +55,8 @@ void loop()
     Serial.print(back);
     Serial.println();
 
+    delay(100);
+
     /*
     GearMsg msg;
     msg.gear = Gear::Neutral;
