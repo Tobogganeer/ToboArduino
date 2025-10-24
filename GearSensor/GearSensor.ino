@@ -6,10 +6,10 @@
 // L is close, R is far
 // F is close, B is far
 
-const int leftPin = 34;
-const int rightPin = 35;
-const int frontPin = 32;
-const int backPin = 33;
+const int leftPin = 34; // Green
+const int rightPin = 35; // Blue
+const int frontPin = 32; // Yellow
+const int backPin = 33; // Orange
 
 CarComms comms(handleCarData);
 
@@ -38,6 +38,14 @@ void loop()
     float right = analogRead(rightPin) / 4095.0f;
     float front = analogRead(frontPin) / 4095.0f;
     float back = analogRead(backPin) / 4095.0f;
+
+    // Base reading is ~0.45 (voltage divider shenanigans)
+
+    Serial.print("z:0,o:1,");
+
+    Serial.print("left:");
+    Serial.print(left);
+    Serial.print(",");
 
     Serial.print("left:");
     Serial.print(left);
