@@ -34,40 +34,45 @@ void loop()
 {
     // https://github.com/upiir/arduino_gear_indicator/blob/main/ARDUINO_gear_indicator/ARDUINO_gear_indicator.ino
 
-    float left = analogRead(leftPin) / 4095.0f;
-    float right = analogRead(rightPin) / 4095.0f;
-    float front = analogRead(frontPin) / 4095.0f;
-    float back = analogRead(backPin) / 4095.0f;
+    bool left = isActivated(leftPin);
+    bool right = isActivated(rightPin);
+    bool forward = isActivated(frontPin);
+    bool backward = isActivated(backPin);
 
-    // Base reading is ~0.45 (voltage divider shenanigans)
+    uint8_t gear = 0;
 
-    Serial.print("z:0,o:1,");
+    bool centered = !left && !right;
 
-    Serial.print("left:");
-    Serial.print(left);
-    Serial.print(",");
+    if (left && forward)
+        gear = FIRST;
+    else if (left && backward)
+        gear = SECOND;
+    else if (centered && forward)
+        gear = THIRD;
+    else if (centered && backward)
+        gear = FOURTH;
+    else if (right && forward)
+        gear = FIFTH;
+    else if (right && backward)
+        gear = REVERSE;
+    else
+        gear = NEUTRAL;
 
-    Serial.print("left:");
-    Serial.print(left);
-    Serial.print(",");
-
-    Serial.print("right:");
-    Serial.print(right);
-    Serial.print(",");
-
-    Serial.print("front:");
-    Serial.print(front);
-    Serial.print(",");
-
-    Serial.print("back:");
-    Serial.print(back);
-    Serial.println();
-
-    delay(100);
-
-    /*
     GearMsg msg;
-    msg.gear = Gear::Neutral;
+    msg.gear = (Gear)gear;
     comms.send(CarDataType::ID_GEAR, &msg, sizeof(GearMsg));
-    */
+
+    delay(50); // 20 times a second is enough
+
+    // TODO: Store last few gears and update only if it's been consistent for a few ticks
+}
+
+bool isActivated(int pin)
+{
+    // Base reading is ~0.45 (voltage divider shenanigans)
+    const float baseline = 0.45f;
+    const float threshold = 0.25f;
+
+    float value = analogRead(pin) / 4095.0f;
+    return fabsf(value - baseline) > threshold;
 }

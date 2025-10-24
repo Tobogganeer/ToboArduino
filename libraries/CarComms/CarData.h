@@ -20,13 +20,13 @@ typedef enum : uint8_t {
 #define GEAR_REVERSE 6
 
 typedef enum : uint8_t {
-	Neutral,
-	First,
-	Second,
-	Third,
-	Fourth,
-	Fifth,
-	Reverse,
+	NEUTRAL,
+	FIRST,
+	SECOND,
+	THIRD,
+	FOURTH,
+	FIFTH,
+	REVERSE,
 } Gear;
 
 typedef enum : uint8_t {
