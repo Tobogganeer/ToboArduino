@@ -25,6 +25,15 @@ void setup()
 
 void loop()
 {
+    for (int i = 0; i < 13; i++)
+    {
+        hud.setDigit(0, 2, i, false);
+        hud.setDigit(0, 1, i + 1, false);
+        hud.setDigit(0, 0, i + 2, false);
+        delay(250);
+    }
+    hud.clearDisplay(0);
+    delay(250);
 }
 
 // Reference for now
