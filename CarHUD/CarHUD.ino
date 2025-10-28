@@ -4,6 +4,16 @@ Display speed and gear on windshield
 Potential for shift indicator (have accel pedal, but engine load would be useful)
 ESP8266
 
+Segments
+
+   A
+   _
+ F| |B
+  G-
+ E|_|C .
+   D   DP
+
+
 */
 
 #include "LedControl.h"
@@ -25,11 +35,9 @@ void setup()
 
 void loop()
 {
-    for (int i = 0; i < 13; i++)
+    for (int i = 0; i < 255; i++)
     {
-        hud.setDigit(0, 2, i, false);
-        hud.setDigit(0, 1, i + 1, false);
-        hud.setDigit(0, 0, i + 2, false);
+        hud.setRow(0, 0, i);
         delay(250);
     }
     hud.clearDisplay(0);
