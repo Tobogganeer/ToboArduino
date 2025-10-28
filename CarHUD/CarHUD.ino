@@ -23,6 +23,33 @@ const int mosi = 13;  // D7, GPIO 13, goes to DataIn
 const int sclk = 14;  // D5, GPIO 14, goes to CLK
 const int cs = 15;    // D8, GPIO 15, goes to LOAD
 
+// ------------- DPABCDEFG
+// Remember digits are upside down
+const int n_0 = 0b01111110;
+const int n_1 = 0b00110000;
+const int n_2 = 0b01011011;
+const int n_3 = 0b01111001;
+const int n_4 = 0b00110101;
+const int n_5 = 0b01101101;
+const int n_6 = 0b01101111;
+const int n_7 = 0b00111000;
+const int n_8 = 0b01111111;
+const int n_9 = 0b01111101;
+
+const int d_reverse = 0b00111111;
+const int d_neutral = 0b00100011;
+
+// guhhhhh whatever
+const int white_left = 1;
+const int white_middle = 0;
+const int white_right = 3;
+const int blue_left = 2;
+const int blue_middle = 5;
+const int blue_right = 4;
+
+int digits[10] = { n_0, n_1, n_2, n_3, n_4, n_5, n_6, n_7, n_8, n_9 };
+int digitIndices[6] = { white_left, white_middle, white_right, blue_left, blue_middle, blue_right };
+
 // Data pin, clock pin, cs pin, num devices (MAX7219 drivers)
 LedControl hud = LedControl(mosi, sclk, cs, 1);
 
@@ -35,11 +62,18 @@ void setup()
 
 void loop()
 {
-    for (int i = 0; i < 255; i++)
+    //hud.setRow(0, 0, 1); // Blinking G, so 0b01000000 would be A (leftmost bit is DP)
+    //delay(250);
+
+    for (int d = 0; d < 6; d++)
     {
-        hud.setRow(0, 0, i);
-        delay(250);
+        for (int i = 0; i < 10; i++)
+        {
+            hud.setRow(0, digitIndices[d], digits[i]);
+            delay(100);
+        }
     }
+
     hud.clearDisplay(0);
     delay(250);
 }
