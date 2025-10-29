@@ -58,46 +58,32 @@ Tools:
 
 */
 
-/////////////////////////////////////////////////////////////////
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
-#include "Rotary.h";
+LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
-/////////////////////////////////////////////////////////////////
+const int redButton = 25;
 
-#define ROTARY_PIN1	18
-#define ROTARY_PIN2	19
 
-/////////////////////////////////////////////////////////////////
+void setup()
+{
+    pinMode(redButton, INPUT_PULLUP);
 
-Rotary r = Rotary(ROTARY_PIN1, ROTARY_PIN2);
-
-/////////////////////////////////////////////////////////////////
-
-void setup() {
-  Serial.begin(9600);
-  delay(50);
-  Serial.println("\n\nSimple Counter");
-  
-  r.setChangedHandler(rotate);
-  r.setLeftRotationHandler(showDirection);
-  r.setRightRotationHandler(showDirection);
+    lcd.init();  // initialize the lcd
+    lcd.init();
+    // Print a message to the LCD.
+    lcd.backlight();
+    lcd.setCursor(3, 0);
+    lcd.print("Hello, world!");
+    lcd.setCursor(2, 1);
+    lcd.print("Group 40!");
 }
 
-void loop() {
-  r.loop();
+void loop()
+{
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(digitalRead(redButton) ? "Not Pressed" : "Pressed");
+    delay(200);
 }
-
-/////////////////////////////////////////////////////////////////
-
-// on change
-void rotate(Rotary& r) {
-   Serial.println(r.getPosition());
-}
-
-// on left or right rotattion
-void showDirection(Rotary& r) {
-  Serial.println(r.directionToString(r.getDirection()));
-}
-
-/////////////////////////////////////////////////////////////////
-
