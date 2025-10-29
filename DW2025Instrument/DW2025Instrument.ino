@@ -49,6 +49,15 @@ Total 20 pins
 
 NEED A DEMULTIPLEXER
 
+Tools:
+- Tin snips / Metal Shears
+- File
+- Print better keys
+- Pullstart spacer
+- Rotary encoder
+- Calipers
+- Switch panel
+
 */
 
 void setup()
