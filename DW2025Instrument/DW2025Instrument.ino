@@ -23,12 +23,12 @@ ________________
 Total     24 min, 30 max + LEDs
 
 - ESP PINS
-D13
-D12
-D14
-D27
-D26
-D25
+D13 Blue Button
+D12 Red Button
+D14 Red Switch
+D27 Blue Switch
+D26 Green Switch
+D25 Yelorange Switch
 D33
 D32
 D35 (input only, no pullup)
@@ -41,8 +41,8 @@ D17
 D5
 D18
 D19
-D21 (default SDA)
-D22 (default SCL)
+D21 (default SDA) Display
+D22 (default SCL) Display
 D23
 ___________
 Total 20 pins
@@ -50,22 +50,54 @@ Total 20 pins
 NEED A DEMULTIPLEXER
 
 Tools:
-- Tin snips / Metal Shears
-- File
 - Print better keys
 - Pullstart spacer
-- Rotary encoder
-- Calipers
 - Switch panel
+- Demultiplexer
+- Longer wires (M-M)
 
 */
 
-void setup()
-{
-    // put your setup code here, to run once:
+/////////////////////////////////////////////////////////////////
+
+#include "Rotary.h";
+
+/////////////////////////////////////////////////////////////////
+
+#define ROTARY_PIN1	18
+#define ROTARY_PIN2	19
+
+/////////////////////////////////////////////////////////////////
+
+Rotary r = Rotary(ROTARY_PIN1, ROTARY_PIN2);
+
+/////////////////////////////////////////////////////////////////
+
+void setup() {
+  Serial.begin(9600);
+  delay(50);
+  Serial.println("\n\nSimple Counter");
+  
+  r.setChangedHandler(rotate);
+  r.setLeftRotationHandler(showDirection);
+  r.setRightRotationHandler(showDirection);
 }
 
-void loop()
-{
-    // put your main code here, to run repeatedly:
+void loop() {
+  r.loop();
 }
+
+/////////////////////////////////////////////////////////////////
+
+// on change
+void rotate(Rotary& r) {
+   Serial.println(r.getPosition());
+}
+
+// on left or right rotattion
+void showDirection(Rotary& r) {
+  Serial.println(r.directionToString(r.getDirection()));
+}
+
+/////////////////////////////////////////////////////////////////
+
