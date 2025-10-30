@@ -17,11 +17,11 @@ D35 (input only, no pullup)
 D34 (input only, no pullup)
 D15
 D2
-D4
-D16
-D17
-D5
-D18
+D4 WL (white key, left side)
+D16 BL
+D17 WM
+D5 BR
+D18 WR
 D19
 D21 (default SDA) Display
 D22 (default SCL) Display
@@ -62,7 +62,10 @@ long lastSendTime;
 #define CHECK_BYTE 0xFC
 
 uint8_t receiverAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-uint8_t dataWithCheckByte[250] = {0};
+uint8_t dataWithCheckByte[250] = { 0 };
+
+const int displayDataSize = 2; // Byte for each health bar
+
 
 void setup()
 {
@@ -75,13 +78,60 @@ void setup()
     lcd.backlight();
 
     debugLCDPrint();
+
+    initESPNOW();
 }
 
 void initPins()
 {
     // TODO: Handle debouncing
-    pinMode(blueButton, INPUT); // Have external pulldown resistors so we can use the LEDs
+    pinMode(blueButton, INPUT);  // Have external pulldown resistors so we can use the LEDs
     pinMode(redButton, INPUT);
+}
+
+void initESPNOW()
+{
+    WiFi.mode(WIFI_STA);
+
+    WiFi.setChannel(ESP_NOW_CHANNEL);
+
+    // Init ESP-NOW
+    if (esp_now_init() != 0)
+    {
+        Serial.println("Error initializing ESP-NOW for instrument!");
+        return;
+    }
+
+    esp_now_peer_info_t peerInfo = {};
+    memcpy(peerInfo.peer_addr, receiverAddress, 6);
+    peerInfo.channel = ESP_NOW_CHANNEL;
+    peerInfo.encrypt = false;
+
+    if (!esp_now_is_peer_exist(receiverAddress))
+    {
+        if (esp_now_add_peer(&peerInfo) != ESP_OK)
+        {
+            log_e("Failed to add broadcast peer");
+        }
+    }
+
+    // Register receive callback
+    esp_now_register_recv_cb(recv);
+}
+
+void recv(const esp_now_recv_info* info, const uint8_t* incomingData, int len)
+{
+    // Health bytes + check byte
+    if (len < displayDataSize + 1)
+        return;
+
+    if (incomingData[0] != CHECK_BYTE)
+        return;
+
+    uint8_t playerHealth = incomingData[1];
+    uint8_t bossHealth = incomingData[2];
+
+    // TODO: Update display
 }
 
 void debugLCDPrint()
@@ -118,5 +168,4 @@ void loop()
 
 void sendInputs()
 {
-
 }

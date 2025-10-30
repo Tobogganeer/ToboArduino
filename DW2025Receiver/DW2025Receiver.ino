@@ -3,6 +3,8 @@
 
 // ESP8266
 // Just relays data from instrument to computer
+// MAC: 84:0D:8E:B7:E8:2C
+// Instrument MAC:
 
 // From Tobo CarComms
 #define ESP_NOW_CHANNEL 4
@@ -11,25 +13,38 @@
 uint8_t instrumentAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 uint8_t dataWithCheckByte[250] = { 0 };
 
-const int inputSize = ##;
-
 void setup()
 {
     Serial.begin(115200);
+
+    WiFi.mode(WIFI_STA);
+
+    wifi_set_channel(ESP_NOW_CHANNEL);
+
+    // Init ESP-NOW
+    if (esp_now_init() != 0)
+    {
+        Serial.println("Error initializing ESP-NOW for DW receiver!");
+        return;
+    }
+
+    // "Connect" to instrument
+    esp_now_add_peer(instrumentAddress, ESP_NOW_ROLE_COMBO, ESP_NOW_CHANNEL, NULL, 0)
+
+    // Register receive callback
+    esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+    esp_now_register_recv_cb(recv);
 }
 
 void loop()
 {
     // TODO: Read serial and send display data back
-    // put your main code here, to run repeatedly:
+
+    // esp_now_send(uint8* mac_address, uint8 data, int len)
 }
 
 void recv(uint8_t* mac, uint8_t* incomingData, uint8_t len)
 {
-    // Input + check byte
-    if (len < inputSize + 1)
-        return;
-
     if (incomingData[0] != CHECK_BYTE)
         return;
 
