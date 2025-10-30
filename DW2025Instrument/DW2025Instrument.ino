@@ -23,11 +23,11 @@ ________________
 Total     24 min, 30 max + LEDs
 
 - ESP PINS
-D13 Blue Button
-D12 Red Button
+D13 Red Button
+D12 Blue Button
 D14 Red Switch
-D27 Blue Switch
-D26 Green Switch
+D27 Green Switch
+D26 Blue Switch
 D25 Yelorange Switch
 D33 Uno RX
 D32 Uno TX
@@ -63,24 +63,46 @@ Tools:
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
-const int redButton = 25;
+const int blueButton = 12;
+const int redButton = 13;
+const int redSwitch = 14;
+const int blueSwitch = 26;
+const int greenSwitch = 27;
+const int yellowSwitch = 25;
 
+// Uno handles keypad
 const int unoRX = 33;
 const int unoTX = 32;
+
 
 HardwareSerial uno(1);
 
 void setup()
 {
-    pinMode(redButton, INPUT_PULLUP);
+    initPins();
 
     Serial.begin(115200);
     uno.begin(9600, SERIAL_8N1, unoRX, unoTX);
 
-    lcd.init();  // initialize the lcd
     lcd.init();
-    // Print a message to the LCD.
     lcd.backlight();
+
+    debugLCDPrint();
+}
+
+void initPins()
+{
+    // TODO: Handle debouncing
+    pinMode(blueButton, INPUT_PULLUP);
+    pinMode(redButton, INPUT_PULLUP);
+    pinMode(redSwitch, INPUT_PULLUP);
+    pinMode(blueSwitch, INPUT_PULLUP);
+    pinMode(greenSwitch, INPUT_PULLUP);
+    pinMode(yellowSwitch, INPUT_PULLUP);
+}
+
+void debugLCDPrint()
+{
     lcd.setCursor(3, 0);
     lcd.print("Hello, world!");
     lcd.setCursor(2, 1);
