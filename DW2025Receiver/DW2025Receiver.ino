@@ -38,7 +38,13 @@ void setup()
 
 void loop()
 {
-    // TODO: Read serial and send display data back
+    if (Serial.available())
+    {
+        uint8_t data[3];
+        data[0] = CHECK_BYTE;
+        Serial.readBytes(&data[1], 2); // Read player health and boss health into packet
+        esp_now_send(instrumentAddress, data, 3)
+    }
 
     // esp_now_send(uint8* mac_address, uint8 data, int len)
 }
