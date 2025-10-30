@@ -31,15 +31,15 @@ A5
 
 #include <Keypad.h>
 
-const int redSwitch = ;
-const int blueSwitch = ;
-const int greenSwitch = ;
-const int yellowSwitch = ;
+const int redSwitch = 13;
+const int blueSwitch = 11;
+const int greenSwitch = 12;
+const int yellowSwitch = 10;
 
-const int joystickForwards = ;
-const int joystickBackwards = ;
-const int joystickLeft = ;
-const int joystickRight = ;
+const int joystickForwards = A2;
+const int joystickBackwards = A3;
+const int joystickLeft = A5;
+const int joystickRight = A4;
 
 // Keypad
 const byte ROWS = 4;
@@ -52,9 +52,10 @@ char keys[ROWS][COLS] = {
 };
 
 // Col 2, Row 1, Col 1, Row 4, Col 3, Row 3, Row 2
+//   2      3      4      5      6      7      8
 
-byte rowPins[ROWS] = { #, #, #, #};
-byte colPins[COLS] = { #, #, #};
+byte rowPins[ROWS] = { 3, 8, 7, 5 };
+byte colPins[COLS] = { 4, 2, 6 };
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
@@ -75,7 +76,11 @@ void setup()
 
 void loop()
 {
-    char key = keypad.getKey();
+    char key = 0;
+    keypad.getKeys();
+
+    if (keypad.key[0].kstate == PRESSED)
+        key = keypad.key[0].kchar;
 
     bool red = !digitalRead(redSwitch);
     bool blue = !digitalRead(blueSwitch);
@@ -91,5 +96,5 @@ void loop()
 
     Serial.write(out, 10);
 
-    delay(20); // 50 times per second should be more than enough?
+    delay(20);  // 50ish times per second should be more than enough?
 }
