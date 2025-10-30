@@ -40,7 +40,6 @@ UNO TX (1) is grey
 
 #include <esp_now.h>
 #include <WiFi.h>
-#include <esp_wifi.h>
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -72,6 +71,18 @@ uint8_t dataWithCheckByte[250] = { 0 };
 const int displayDataSize = 2;  // Byte for each health bar
 
 
+uint8_t healthIcon[8] = {
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+    0b11111,
+};
+
+
 void setup()
 {
     initPins();
@@ -81,27 +92,11 @@ void setup()
 
     lcd.init();
     lcd.backlight();
+    lcd.createChar(0, healthIcon);
 
     debugLCDPrint();
 
-    //initESPNOW();
-
-    // https://randomnerdtutorials.com/esp-now-esp32-arduino-ide/
-    WiFi.mode(WIFI_STA);
-    WiFi.STA.begin();
-
-    uint8_t baseMac[6];
-    esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
-    if (ret == ESP_OK)
-    {
-        Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
-                      baseMac[0], baseMac[1], baseMac[2],
-                      baseMac[3], baseMac[4], baseMac[5]);
-    }
-    else
-    {
-        Serial.println("Failed to read MAC address");
-    }
+    initESPNOW();
 }
 
 void initPins()
@@ -153,7 +148,15 @@ void recv(const esp_now_recv_info* info, const uint8_t* incomingData, int len)
     uint8_t playerHealth = incomingData[1];
     uint8_t bossHealth = incomingData[2];
 
-    // TODO: Update display
+    lcd.setCursor(0, 0);
+    lcd.print("BOSS: ");
+    for(int i = 0; i < 10; i++)
+        lcd.write(i < bossHealth ? 0 : '_');
+
+    lcd.setCursor(0, 1);
+    lcd.print("YOU:  ");
+    for(int i = 0; i < 10; i++)
+        lcd.write(i < playerHealth ? 0 : '_');
 }
 
 void debugLCDPrint()
