@@ -93,8 +93,8 @@ void setup()
 void initPins()
 {
     // TODO: Handle debouncing
-    pinMode(blueButton, INPUT_PULLUP);
-    pinMode(redButton, INPUT_PULLUP);
+    pinMode(blueButton, INPUT); // Have external pulldown resistors so we can use the LEDs
+    pinMode(redButton, INPUT);
     pinMode(redSwitch, INPUT_PULLUP);
     pinMode(blueSwitch, INPUT_PULLUP);
     pinMode(greenSwitch, INPUT_PULLUP);
