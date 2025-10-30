@@ -8,8 +8,8 @@ Sends them to ESP8266 via ESP-NOW which relays to computer/Unity
 D13 Red Button
 D12 Blue Button
 D14
-D27
-D26
+D27 Rotary 1
+D26 Rotary 2
 D25
 D33 Uno RX
 D32 Uno TX
@@ -32,11 +32,15 @@ UNO TX (1) is grey
 
 */
 
+// Receiver: 84:0D:8E:B7:E8:2C
+// cc:db:a7:9a:b1:f8
+
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
 #include <esp_now.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -61,10 +65,11 @@ long lastSendTime;
 #define ESP_NOW_CHANNEL 4
 #define CHECK_BYTE 0xFC
 
-uint8_t receiverAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+// 84:0D:8E:B7:E8:2C
+uint8_t receiverAddress[6] = { 0x84, 0x0D, 0x8E, 0xB7, 0xE8, 0x2C };
 uint8_t dataWithCheckByte[250] = { 0 };
 
-const int displayDataSize = 2; // Byte for each health bar
+const int displayDataSize = 2;  // Byte for each health bar
 
 
 void setup()
@@ -79,7 +84,24 @@ void setup()
 
     debugLCDPrint();
 
-    initESPNOW();
+    //initESPNOW();
+
+    // https://randomnerdtutorials.com/esp-now-esp32-arduino-ide/
+    WiFi.mode(WIFI_STA);
+    WiFi.STA.begin();
+
+    uint8_t baseMac[6];
+    esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
+    if (ret == ESP_OK)
+    {
+        Serial.printf("%02x:%02x:%02x:%02x:%02x:%02x\n",
+                      baseMac[0], baseMac[1], baseMac[2],
+                      baseMac[3], baseMac[4], baseMac[5]);
+    }
+    else
+    {
+        Serial.println("Failed to read MAC address");
+    }
 }
 
 void initPins()

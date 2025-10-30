@@ -4,13 +4,13 @@
 // ESP8266
 // Just relays data from instrument to computer
 // MAC: 84:0D:8E:B7:E8:2C
-// Instrument MAC:
+// Instrument MAC: cc:db:a7:9a:b1:f8
 
 // From Tobo CarComms
 #define ESP_NOW_CHANNEL 4
 #define CHECK_BYTE 0xFC
 
-uint8_t instrumentAddress[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+uint8_t instrumentAddress[6] = { 0xCC, 0xDB, 0xA7, 0x9A, 0xB1, 0xF8 };
 uint8_t dataWithCheckByte[250] = { 0 };
 
 void setup()
