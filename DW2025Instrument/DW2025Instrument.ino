@@ -29,8 +29,8 @@ D14 Red Switch
 D27 Blue Switch
 D26 Green Switch
 D25 Yelorange Switch
-D33
-D32
+D33 Uno RX
+D32 Uno TX
 D35 (input only, no pullup)
 D34 (input only, no pullup)
 D15
@@ -65,10 +65,17 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 cha
 
 const int redButton = 25;
 
+const int unoRX = 33;
+const int unoTX = 32;
+
+HardwareSerial uno(1);
 
 void setup()
 {
     pinMode(redButton, INPUT_PULLUP);
+
+    Serial.begin(115200);
+    uno.begin(9600, SERIAL_8N1, unoRX, unoTX);
 
     lcd.init();  // initialize the lcd
     lcd.init();
@@ -82,8 +89,12 @@ void setup()
 
 void loop()
 {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print(digitalRead(redButton) ? "Not Pressed" : "Pressed");
-    delay(200);
+    if (uno.available())
+    {
+        Serial.println(uno.readStringUntil('\n'));
+    }
+    // lcd.clear();
+    // lcd.setCursor(0, 0);
+    // lcd.print(digitalRead(redButton) ? "Not Pressed" : "Pressed");
+    // delay(200);
 }
