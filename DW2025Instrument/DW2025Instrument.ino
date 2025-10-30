@@ -38,6 +38,8 @@ UNO TX (1) is grey
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
+#include "Rotary.h"
+
 #include <esp_now.h>
 #include <WiFi.h>
 
@@ -46,12 +48,22 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 cha
 const int blueButton = 12;
 const int redButton = 13;
 
+const int rotary1 = 27;
+const int rotary2 = 26;
+
+const int wl = 4;
+const int wm = ;
+const int wr = ;
+const int bl = ;
+const int br = ;
+
 // Uno handles keypad
 const int unoRX = 33;
 const int unoTX = 32;
 
 
 HardwareSerial uno(1);
+Rotary pullcord = Rotary(rotary1, rotary2, 4);
 
 char unoInputs[9];
 
@@ -106,6 +118,18 @@ void initPins()
     pinMode(redButton, INPUT);
 }
 
+void initPullcord()
+{
+    pullcord.setLeftRotationHandler(pullcordUpdate);
+    pullcord.setRightRotationHandler(pullcordUpdate);
+}
+
+void pullcordUpdate(Rotary& cord)
+{
+    //cord.getPosition(); // int
+    //cord.getDirection(); // byte
+}
+
 void initESPNOW()
 {
     WiFi.mode(WIFI_STA);
@@ -150,12 +174,12 @@ void recv(const esp_now_recv_info* info, const uint8_t* incomingData, int len)
 
     lcd.setCursor(0, 0);
     lcd.print("BOSS: ");
-    for(int i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i++)
         lcd.write(i < bossHealth ? 0 : '_');
 
     lcd.setCursor(0, 1);
     lcd.print("YOU:  ");
-    for(int i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i++)
         lcd.write(i < playerHealth ? 0 : '_');
 }
 
@@ -177,7 +201,7 @@ void loop()
             memset(unoInputs, 0, 9);
     }
 
-
+    pullcord.loop();
 
     // lcd.clear();
     // lcd.setCursor(0, 0);
