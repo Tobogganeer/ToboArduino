@@ -29,7 +29,7 @@ void setup()
     }
 
     // "Connect" to instrument
-    esp_now_add_peer(instrumentAddress, ESP_NOW_ROLE_COMBO, ESP_NOW_CHANNEL, NULL, 0)
+    esp_now_add_peer(instrumentAddress, ESP_NOW_ROLE_COMBO, ESP_NOW_CHANNEL, NULL, 0);
 
     // Register receive callback
     esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
@@ -43,7 +43,7 @@ void loop()
         uint8_t data[3];
         data[0] = CHECK_BYTE;
         Serial.readBytes(&data[1], 2); // Read player health and boss health into packet
-        esp_now_send(instrumentAddress, data, 3)
+        esp_now_send(instrumentAddress, data, 3);
     }
 
     // esp_now_send(uint8* mac_address, uint8 data, int len)

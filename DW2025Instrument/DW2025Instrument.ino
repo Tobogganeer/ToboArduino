@@ -52,10 +52,10 @@ const int rotary1 = 27;
 const int rotary2 = 26;
 
 const int wl = 4;
-const int wm = ;
-const int wr = ;
-const int bl = ;
-const int br = ;
+const int wm = 17;
+const int wr = 18;
+const int bl = 16;
+const int br = 5;
 
 // Uno handles keypad
 const int unoRX = 33;
@@ -81,6 +81,8 @@ uint8_t receiverAddress[6] = { 0x84, 0x0D, 0x8E, 0xB7, 0xE8, 0x2C };
 uint8_t dataWithCheckByte[250] = { 0 };
 
 const int displayDataSize = 2;  // Byte for each health bar
+
+int pullcordValue;
 
 
 uint8_t healthIcon[8] = {
@@ -116,6 +118,12 @@ void initPins()
     // TODO: Handle debouncing
     pinMode(blueButton, INPUT);  // Have external pulldown resistors so we can use the LEDs
     pinMode(redButton, INPUT);
+
+    pinMode(wl, INPUT_PULLUP);
+    pinMode(wm, INPUT_PULLUP);
+    pinMode(wr, INPUT_PULLUP);
+    pinMode(bl, INPUT_PULLUP);
+    pinMode(br, INPUT_PULLUP);
 }
 
 void initPullcord()
@@ -126,6 +134,7 @@ void initPullcord()
 
 void pullcordUpdate(Rotary& cord)
 {
+    pullcordValue = cord.getPosition();
     //cord.getPosition(); // int
     //cord.getDirection(); // byte
 }
@@ -217,4 +226,35 @@ void loop()
 
 void sendInputs()
 {
+    uint8_t data[22];
+
+    data[0] = CHECK_BYTE;
+    memcpy(&data[1], unoInputs, 9);
+    uint32_t pullInt = pullcordValue;
+    memcpy(&data[10], &pullInt, 4);
+
+    data[14] = digitalRead(blueButton);
+    data[15] = digitalRead(redButton);
+
+    data[16] = !digitalRead(wl);
+    data[17] = !digitalRead(wm);
+    data[18] = !digitalRead(wr);
+    data[19] = !digitalRead(bl);
+    data[20] = !digitalRead(br);
+    data[21] = '\n';
+
+    esp_now_send(receiverAddress, data, 22);
+
+    // unoInputs -> 9 bytes
+
+    // pullcordValue -> 4 bytes
+
+    // pinMode(blueButton, INPUT);  // Have external pulldown resistors so we can use the LEDs
+    // pinMode(redButton, INPUT);
+
+    // pinMode(wl, INPUT_PULLUP);
+    // pinMode(wm, INPUT_PULLUP);
+    // pinMode(wr, INPUT_PULLUP);
+    // pinMode(bl, INPUT_PULLUP);
+    // pinMode(br, INPUT_PULLUP);
 }
