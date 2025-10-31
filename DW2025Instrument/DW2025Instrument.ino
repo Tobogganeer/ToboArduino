@@ -100,6 +100,7 @@ uint8_t healthIcon[8] = {
 void setup()
 {
     initPins();
+    initPullcord();
 
     Serial.begin(115200);
     uno.begin(9600, SERIAL_8N1, unoRX, unoTX);
@@ -128,6 +129,7 @@ void initPins()
 
 void initPullcord()
 {
+    pullcord.setChangedHandler(pullcordUpdate);
     pullcord.setLeftRotationHandler(pullcordUpdate);
     pullcord.setRightRotationHandler(pullcordUpdate);
 }
@@ -234,11 +236,11 @@ void sendInputs()
     // 0123456789012345
     // cxxxxxxxxx4444bb
     uint32_t pullInt = pullcordValue;
-    data[10] = (pullInt >> 24) && 0xFF;
-    data[11] = (pullInt >> 16) && 0xFF;
-    data[12] = (pullInt >> 8) && 0xFF;
-    data[13] = pullInt && 0xFF;
-    //memcpy(&data[10], &pullInt, 4);
+    // data[10] = (pullInt >> 24) && 0xFF;
+    // data[11] = (pullInt >> 16) && 0xFF;
+    // data[12] = (pullInt >> 8) && 0xFF;
+    // data[13] = pullInt && 0xFF;
+    memcpy(&data[10], &pullInt, 4);
 
     data[14] = digitalRead(blueButton);
     data[15] = digitalRead(redButton);
