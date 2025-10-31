@@ -204,10 +204,11 @@ void loop()
 {
     if (uno.available() >= 10)
     {
-        int inputsRead = uno.readBytesUntil('\n', unoInputs, 9);
+        char rawInputs[9];
+        int inputsRead = uno.readBytesUntil('\n', rawInputs, 9);
         // Zero out inputs if we got bad data
-        if (inputsRead != 9)
-            memset(unoInputs, 0, 9);
+        if (inputsRead == 9)
+            memcpy(unoInputs, rawInputs, 9);
     }
 
     pullcord.loop();
@@ -230,8 +231,14 @@ void sendInputs()
 
     data[0] = CHECK_BYTE;
     memcpy(&data[1], unoInputs, 9);
+    // 0123456789012345
+    // cxxxxxxxxx4444bb
     uint32_t pullInt = pullcordValue;
-    memcpy(&data[10], &pullInt, 4);
+    data[10] = (pullInt >> 24) && 0xFF;
+    data[11] = (pullInt >> 16) && 0xFF;
+    data[12] = (pullInt >> 8) && 0xFF;
+    data[13] = pullInt && 0xFF;
+    //memcpy(&data[10], &pullInt, 4);
 
     data[14] = digitalRead(blueButton);
     data[15] = digitalRead(redButton);
