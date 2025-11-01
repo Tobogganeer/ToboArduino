@@ -88,25 +88,26 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
     if (type == CarDataType::ID_CARINFO)
     {
         CarInfoMsg* info = (CarInfoMsg*)data;
-        Serial.print("Got data. RPM: ");
-        Serial.print(info->rpm);
-        Serial.print(", Speed:");
-        Serial.println(info->speed);
+        setSpeed(info->speed);
+    }
+    else if (type == CarDataType::ID_GEAR)
+    {
+        GearMsg* gear = (GearMsg*)data;
+        setGear(gearDigit, gear->gear);
     }
 }
 
-void loop()
-{
-    for (int d = 0; d < 6; d++)
-    {
-        for (int i = 0; i < 10; i++)
-        {
-            hud.setRow(0, digitIndices[d], digits[i]);
-            delay(100);
-        }
-    }
+void loop() {}
 
-    //hud.clearDisplay(0);
+void setSpeed(uint8_t speed)
+{
+    int hundreds = (speed / 100) % 10;
+    int tens = (speed / 10) % 10;
+    int ones = speed % 10;
+
+    setDigit(hundredsDigit, hundreds > 0 ? digits[hundreds] : 0); // '0' character would be blank (all bits zero)
+    setDigit(tensDigit, (tens > 0 || hundreds > 0) ? digits[tens] : 0); // Make sure numbers like 101 will display
+    setDigit(ones, digits[ones]); // Display a 0 if the total speed is zero
 }
 
 void setGear(int digit, Gear gear)
