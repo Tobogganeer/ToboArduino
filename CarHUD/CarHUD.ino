@@ -42,6 +42,8 @@ const int n_9 = 0b01111101;
 const int d_reverse = 0b00111111;
 const int d_neutral = 0b00100011;
 
+const int d_dash = 0b00000001;
+
 // guhhhhh whatever
 const int white_left = 1;
 const int white_middle = 0;
@@ -55,6 +57,12 @@ int digitIndices[6] = { white_left, white_middle, white_right, blue_left, blue_m
 
 int gears[7] = { d_reverse, d_neutral, n_1, n_2, n_3, n_4, n_5 };
 
+const int hundredsDigit = 0;
+const int tensDigit = 1;
+const int onesDigit = 2;
+
+const int gearDigit = 4;
+
 // Data pin, clock pin, cs pin, num devices (MAX7219 drivers)
 LedControl hud = LedControl(mosi, sclk, cs, 1);
 
@@ -64,19 +72,27 @@ void setup()
     hud.setIntensity(0, 8);  // 8 is a medium value
     hud.clearDisplay(0);
 
+    // Blank out digits before data is received
+    setDigit(hundredsDigit, d_dash);
+    setDigit(tensDigit, d_dash);
+    setDigit(onesDigit, d_dash);
+    setDigit(gearDigit, d_dash);
+
     comms.begin();
     // Speed and gear
     comms.receiveTypeMask = CarDataType::ID_CARINFO | CarDataType::ID_GEAR;
 }
 
-void handleCarData(CarDataType type, const uint8_t* data, int len) {
-  if (type == CarDataType::ID_CARINFO) {
-    CarInfoMsg* info = (CarInfoMsg*)data;
-    Serial.print("Got data. RPM: ");
-    Serial.print(info->rpm);
-    Serial.print(", Speed:");
-    Serial.println(info->speed);
-  }
+void handleCarData(CarDataType type, const uint8_t* data, int len)
+{
+    if (type == CarDataType::ID_CARINFO)
+    {
+        CarInfoMsg* info = (CarInfoMsg*)data;
+        Serial.print("Got data. RPM: ");
+        Serial.print(info->rpm);
+        Serial.print(", Speed:");
+        Serial.println(info->speed);
+    }
 }
 
 void loop()
@@ -90,8 +106,18 @@ void loop()
         }
     }
 
-    hud.clearDisplay(0);
-    delay(250);
+    //hud.clearDisplay(0);
+}
+
+void setGear(int digit, Gear gear)
+{
+    int character = gears[gear + 1];  // Gear is -1-5, array is 0-6
+    setDigit(digit, character);
+}
+
+void setDigit(int digit, int character)
+{
+    hud.setRow(0, digitIndices[digit], character);
 }
 
 // Reference for now
