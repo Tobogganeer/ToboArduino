@@ -39,9 +39,8 @@ const int n_7 = 0b00111000;
 const int n_8 = 0b01111111;
 const int n_9 = 0b01111101;
 
-//const int d_reverse = 0b00111111; // R
-const int d_reverse = 0b01110111; // r
-const int d_neutral = 0b00100011; // R but rightside up (incorrect for actual hud)
+const int d_reverse = 0b00000011;
+const int d_neutral = 0b00100011;
 
 const int d_dash = 0b00000001;
 
@@ -98,19 +97,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
     }
 }
 
-void loop()
-{
-    for (int j = 0; j < 7; j++)
-    {
-        setGear(gearDigit, (Gear)j);
-
-        for (uint8_t i = 0; i < 20; i++)
-        {
-            setSpeed(i);
-            delay(50);
-        }
-    }
-}
+void loop() {}
 
 void setSpeed(uint8_t speed)
 {
