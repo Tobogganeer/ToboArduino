@@ -6,16 +6,20 @@
 // L is close, R is far
 // F is close, B is far
 
-const int leftPin = 34; // Green
-const int rightPin = 35; // Blue
-const int frontPin = 32; // Yellow
-const int backPin = 33; // Orange
+const int leftPin = 34;   // Green
+const int rightPin = 35;  // Blue
+const int frontPin = 32;  // Yellow
+const int backPin = 33;   // Orange
 
 CarComms comms(handleCarData);
 
+#define DEBUG
+
 void setup()
 {
+#ifdef DEBUG
     Serial.begin(115200);
+#endif
 
     comms.begin();
     comms.receiveTypeMask = 0;  // We don't want to receive at all, actually
@@ -62,7 +66,12 @@ void loop()
     msg.gear = (Gear)gear;
     comms.send(CarDataType::ID_GEAR, &msg, sizeof(GearMsg));
 
-    delay(50); // 20 times a second is enough
+#ifdef DEBUG
+    Serial.print("one:1,low:0,");
+    Serial.println("gear:" + String(gear));
+#endif
+
+    delay(50);  // 20 times a second is enough
 
     // TODO: Store last few gears and update only if it's been consistent for a few ticks
 }
@@ -74,5 +83,10 @@ bool isActivated(int pin)
     const float threshold = 0.25f;
 
     float value = analogRead(pin) / 4095.0f;
-    return fabsf(value - baseline) > threshold;
+#ifdef DEBUG
+    Serial.print("pin" + String(pin) + ":" + String(value) + ",")
+#endif
+
+        return fabsf(value - baseline)
+      > threshold;
 }
