@@ -39,8 +39,9 @@ const int n_7 = 0b00111000;
 const int n_8 = 0b01111111;
 const int n_9 = 0b01111101;
 
-const int d_reverse = 0b00111111;
-const int d_neutral = 0b00100011;
+//const int d_reverse = 0b00111111; // R
+const int d_reverse = 0b01110111; // r
+const int d_neutral = 0b00100011; // R but rightside up (incorrect for actual hud)
 
 const int d_dash = 0b00000001;
 
@@ -55,7 +56,7 @@ const int blue_right = 4;
 int digits[10] = { n_0, n_1, n_2, n_3, n_4, n_5, n_6, n_7, n_8, n_9 };
 int digitIndices[6] = { white_left, white_middle, white_right, blue_left, blue_middle, blue_right };
 
-int gears[7] = { d_reverse, d_neutral, n_1, n_2, n_3, n_4, n_5 };
+int gears[7] = { d_neutral, n_1, n_2, n_3, n_4, n_5, d_reverse };
 
 const int hundredsDigit = 0;
 const int tensDigit = 1;
@@ -97,7 +98,19 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
     }
 }
 
-void loop() {}
+void loop()
+{
+    for (int j = 0; j < 7; j++)
+    {
+        setGear(gearDigit, (Gear)j);
+
+        for (uint8_t i = 0; i < 20; i++)
+        {
+            setSpeed(i);
+            delay(50);
+        }
+    }
+}
 
 void setSpeed(uint8_t speed)
 {
@@ -105,14 +118,14 @@ void setSpeed(uint8_t speed)
     int tens = (speed / 10) % 10;
     int ones = speed % 10;
 
-    setDigit(hundredsDigit, hundreds > 0 ? digits[hundreds] : 0); // '0' character would be blank (all bits zero)
-    setDigit(tensDigit, (tens > 0 || hundreds > 0) ? digits[tens] : 0); // Make sure numbers like 101 will display
-    setDigit(ones, digits[ones]); // Display a 0 if the total speed is zero
+    setDigit(hundredsDigit, hundreds > 0 ? digits[hundreds] : 0);        // '0' character would be blank (all bits zero)
+    setDigit(tensDigit, (tens > 0 || hundreds > 0) ? digits[tens] : 0);  // Make sure numbers like 101 will display
+    setDigit(onesDigit, digits[ones]);                                        // Display a 0 if the total speed is zero
 }
 
-void setGear(int digit, Gear gear)
+void setGear(int digit, uint8_t gear)
 {
-    int character = gears[gear + 1];  // Gear is -1-5, array is 0-6
+    int character = gears[gear];  // Gear is -1-5, array is 0-6
     setDigit(digit, character);
 }
 
