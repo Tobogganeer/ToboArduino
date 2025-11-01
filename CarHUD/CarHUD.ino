@@ -17,6 +17,9 @@ Segments
 */
 
 #include "LedControl.h"
+#include "CarComms.h"
+
+CarComms comms(handleCarData);
 
 // https://randomnerdtutorials.com/esp8266-pinout-reference-gpios/
 const int mosi = 13;  // D7, GPIO 13, goes to DataIn
@@ -50,6 +53,8 @@ const int blue_right = 4;
 int digits[10] = { n_0, n_1, n_2, n_3, n_4, n_5, n_6, n_7, n_8, n_9 };
 int digitIndices[6] = { white_left, white_middle, white_right, blue_left, blue_middle, blue_right };
 
+int gears[7] = { d_reverse, d_neutral, n_1, n_2, n_3, n_4, n_5 };
+
 // Data pin, clock pin, cs pin, num devices (MAX7219 drivers)
 LedControl hud = LedControl(mosi, sclk, cs, 1);
 
@@ -58,13 +63,24 @@ void setup()
     hud.shutdown(0, false);  // WAKE UP
     hud.setIntensity(0, 8);  // 8 is a medium value
     hud.clearDisplay(0);
+
+    comms.begin();
+    // Speed and gear
+    comms.receiveTypeMask = CarDataType::ID_CARINFO | CarDataType::ID_GEAR;
+}
+
+void handleCarData(CarDataType type, const uint8_t* data, int len) {
+  if (type == CarDataType::ID_CARINFO) {
+    CarInfoMsg* info = (CarInfoMsg*)data;
+    Serial.print("Got data. RPM: ");
+    Serial.print(info->rpm);
+    Serial.print(", Speed:");
+    Serial.println(info->speed);
+  }
 }
 
 void loop()
 {
-    //hud.setRow(0, 0, 1); // Blinking G, so 0b01000000 would be A (leftmost bit is DP)
-    //delay(250);
-
     for (int d = 0; d < 6; d++)
     {
         for (int i = 0; i < 10; i++)
