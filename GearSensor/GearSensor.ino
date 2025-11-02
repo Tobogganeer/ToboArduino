@@ -80,13 +80,12 @@ bool isActivated(int pin)
 {
     // Base reading is ~0.45 (voltage divider shenanigans)
     const float baseline = 0.45f;
-    const float threshold = 0.25f;
+    const float threshold = 0.05f;
 
     float value = analogRead(pin) / 4095.0f;
 #ifdef DEBUG
-    Serial.print("pin" + String(pin) + ":" + String(value) + ",")
+    Serial.print("pin" + String(pin) + ":" + String(value) + ",");
 #endif
 
-        return fabsf(value - baseline)
-      > threshold;
+    return fabsf(value - baseline) > threshold;
 }
