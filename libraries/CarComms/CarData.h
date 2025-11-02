@@ -93,6 +93,7 @@ typedef struct CarInfoMsg {
 	bool door_rearDriverOpen;
 	bool door_rearPassengerOpen;
 	bool door_hatchOpen;
+	bool lightsOn;
 } CarInfoMsg;
 
 typedef struct GearMsg {
