@@ -13,7 +13,7 @@ const int backPin = 33;   // Orange
 
 CarComms comms(handleCarData);
 
-#define DEBUG
+//#define DEBUG
 
 void setup()
 {

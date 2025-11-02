@@ -89,6 +89,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
     {
         CarInfoMsg* info = (CarInfoMsg*)data;
         setSpeed(info->speed);
+        hud.setIntensity(0, info->lightsOn ? 1 : 8);
     }
     else if (type == CarDataType::ID_GEAR)
     {
@@ -107,7 +108,7 @@ void setSpeed(uint8_t speed)
 
     setDigit(hundredsDigit, hundreds > 0 ? digits[hundreds] : 0);        // '0' character would be blank (all bits zero)
     setDigit(tensDigit, (tens > 0 || hundreds > 0) ? digits[tens] : 0);  // Make sure numbers like 101 will display
-    setDigit(onesDigit, digits[ones]);                                        // Display a 0 if the total speed is zero
+    setDigit(onesDigit, digits[ones]);                                   // Display a 0 if the total speed is zero
 }
 
 void setGear(int digit, uint8_t gear)
