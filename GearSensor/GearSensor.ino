@@ -100,7 +100,7 @@ void loop()
 #ifdef DEBUG
     Serial.print("one:1,low:0,");
     Serial.print("sentgear:" + String(currentSentGear));
-    Serial.println("gear:" + String(gear));
+    Serial.println(",gear:" + String(gear));
 #endif
 
     delay(50);  // 20 times a second is enough
@@ -110,7 +110,7 @@ bool isActivated(int pin)
 {
     // Base reading is ~0.45 (voltage divider shenanigans)
     const float baseline = 0.45f;
-    const float threshold = 0.05f;
+    const float threshold = 0.15f;
 
     float value = analogRead(pin) / 4095.0f;
 #ifdef DEBUG
