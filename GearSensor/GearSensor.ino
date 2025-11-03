@@ -13,7 +13,14 @@ const int backPin = 33;   // Orange
 
 CarComms comms(handleCarData);
 
-//#define DEBUG
+uint8_t currentSentGear = 0;
+uint8_t previousGear = 0;
+unsigned long msWeWentIntoNeutral;
+
+// If we go from first to second, give this long before setting the gear to neutral
+const int timeInNeutralBeforeActuallySetting = 500;
+
+#define DEBUG
 
 void setup()
 {
@@ -62,18 +69,41 @@ void loop()
     else
         gear = NEUTRAL;
 
+    // Wait a bit before changing state to neutral (to avoid flicker when going from first to second, etc)
+    if (gear == NEUTRAL)
+    {
+        // Check if we just went into "neutral"
+        if (previousGear != NEUTRAL)
+        {
+            msWeWentIntoNeutral = millis();
+        }
+        // We've been in neutral for a bit
+        else
+        {
+            unsigned long msInNeutral = millis() - msWeWentIntoNeutral;
+            if (msInNeutral > timeInNeutralBeforeActuallySetting)
+                currentSentGear = gear;
+        }
+    }
+    else
+    {
+        // If we aren't in neutral, just send the gear immediately
+        currentSentGear = gear;
+    }
+
+    previousGear = gear;
+
     GearMsg msg;
-    msg.gear = (Gear)gear;
+    msg.gear = (Gear)currentSentGear;
     comms.send(CarDataType::ID_GEAR, &msg, sizeof(GearMsg));
 
 #ifdef DEBUG
     Serial.print("one:1,low:0,");
+    Serial.print("sentgear:" + String(currentSentGear));
     Serial.println("gear:" + String(gear));
 #endif
 
     delay(50);  // 20 times a second is enough
-
-    // TODO: Store last few gears and update only if it's been consistent for a few ticks
 }
 
 bool isActivated(int pin)
