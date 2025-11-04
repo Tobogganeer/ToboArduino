@@ -49,7 +49,7 @@ void test_bytes() {
     }
   }
 
-  prefs.clear();
+  TEST_ASSERT_TRUE(prefs.clear());
 }
 
 void test_zero_bytes() {
@@ -63,6 +63,24 @@ void test_zero_bytes() {
   TEST_ASSERT_EQUAL_UINT(0, prefs.putString("string", ""));
   TEST_ASSERT_TRUE(prefs.isKey("string"));
   TEST_ASSERT_EQUAL_STRING("", prefs.getString("string", "default").c_str());
+
+  TEST_ASSERT_TRUE(prefs.clear());
+}
+
+void test_string() {
+  Preferences prefs;
+  TEST_ASSERT_TRUE(prefs.begin("test"));
+
+  TEST_ASSERT_EQUAL_UINT(7, prefs.putString("aaa", "value A"));
+  TEST_ASSERT_EQUAL_UINT(7, prefs.putString("bbb", "value B"));
+
+  char buffer[8];
+
+  prefs.getString("aaa", buffer, sizeof(buffer));
+  TEST_ASSERT_EQUAL_STRING("value A", buffer);
+
+  prefs.getString("bbb", buffer, sizeof(buffer));
+  TEST_ASSERT_EQUAL_STRING("value B", buffer);
 }
 
 void test_remove_key() {
@@ -84,7 +102,7 @@ void test_remove_key() {
   TEST_ASSERT_EQUAL_STRING("", prefs.getString("aaa").c_str());
   TEST_ASSERT_EQUAL_STRING("value B", prefs.getString("bbb").c_str());
 
-  prefs.clear();
+  TEST_ASSERT_TRUE(prefs.clear());
 }
 
 void test_clear_namespace() {
@@ -113,8 +131,8 @@ void test_clear_namespace() {
   TEST_ASSERT_EQUAL_STRING("value AAA", prefsA.getString("value").c_str());
   TEST_ASSERT_EQUAL_STRING("value BBB", prefsB.getString("value").c_str());
 
-  prefsA.clear();
-  prefsB.clear();
+  TEST_ASSERT_TRUE(prefsA.clear());
+  TEST_ASSERT_TRUE(prefsB.clear());
 }
 
 void test_utf8_key() {
@@ -123,7 +141,7 @@ void test_utf8_key() {
   TEST_ASSERT_EQUAL_UINT(4, prefs.putUInt("😁", 1234));
   TEST_ASSERT_EQUAL_UINT(1234, prefs.getUInt("😁"));
 
-  prefs.clear();
+  TEST_ASSERT_TRUE(prefs.clear());
 }
 
 void test_utf8_value() {
@@ -132,7 +150,7 @@ void test_utf8_value() {
   TEST_ASSERT_EQUAL_UINT(4, prefs.putString("unicode", "😁"));
   TEST_ASSERT_EQUAL_STRING("😁", prefs.getString("unicode").c_str());
 
-  prefs.clear();
+  TEST_ASSERT_TRUE(prefs.clear());
 }
 
 int runUnityTests(void) {
@@ -142,6 +160,7 @@ int runUnityTests(void) {
 #if !defined(ESP32)
   RUN_TEST(test_zero_bytes);
 #endif
+  RUN_TEST(test_string);
   RUN_TEST(test_utf8_key);
   RUN_TEST(test_utf8_value);
   RUN_TEST(test_remove_key);

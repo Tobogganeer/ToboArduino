@@ -145,12 +145,26 @@ If you don't want to use callback there are also functions available for using i
 
 ```c++
     enum clickType {
-      single_click, 
-      double_click, 
-      triple_click, 
+      single_click,
+      double_click,
+      triple_click,
       long_click,
       empty
     };
+```
+
+- **Note:** When using the `empty` enum value in your code, it's recommended to use the scoped syntax `clickType::empty` to avoid potential naming conflicts with other libraries (particularly when using libraries that do `using namespace std;` which imports `std::empty()` from the C++17 standard library).
+
+```c++
+// Recommended - explicit scope avoids ambiguity
+if (button.getType() == clickType::empty) {
+  // handle no click
+}
+
+// Also works, but may cause compilation errors with some library combinations
+if (button.getType() == empty) {
+  // handle no click
+}
 ```
 
 - There are also dedicated waits (`waitForClick()`, `waitForDouble()`, `waitForTriple()` and `waitForLong()`) to detect a specific type
@@ -171,20 +185,60 @@ bool isPressedRaw() const;
 bool wasPressed() const;
 ```
 
+#### wasPressedFor() - Press Duration
+
+Returns the duration (in milliseconds) that the button was held down during the most recent press.
+
+**Important**: For multi-click scenarios (double/triple clicks), this returns the duration of the **most recent click only**, not the cumulative time across all clicks.
+
+**Examples**:
+
+- Single click held for 500ms → `wasPressedFor()` returns `500`
+- Long click held for 1200ms → `wasPressedFor()` returns `1200`
+- Double click (1st press: 50ms, 2nd press: 80ms) → `wasPressedFor()` returns `80`
+- Triple click (1st: 40ms, 2nd: 60ms, 3rd: 70ms) → `wasPressedFor()` returns `70`
+
+This behavior was confirmed in [issue #35](https://github.com/LennartHennigs/Button2/issues/35).
+
 ### IDs for Button Instances
 
 - Each button instance gets a unique (auto incremented) ID upon creation.
 - You can get a buttons' ID via `getID()`.
 - Alternatively, you can use `setID(int newID)` to set a new one. But then you need to make sure that they are unique.
 
-### Creating A Custom Button State Handler
+### Virtual Buttons and Custom State Handlers
 
-- Out of the box *Button2* supports regular hardware buttons.
-- If you want to add other button types you need to define your own function that tracks the state of the button.
-- Use `setButtonStateFunction()` to assign it to your *Button2* instance
-- Make the button pin 'VIRTUAL', i.e. by calling  `button.begin(VIRTUAL_PIN);`
-- And don't forget to initialize the button as this cannot be handled by *Button2*
-- See [ESP32CapacitiveTouch.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/ESP32CapacitiveTouch/ESP32CapacitiveTouch.ino), [M5StackCore2CustomHandler.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/M5StackCore2CustomHandler/M5StackCore2CustomHandler.ino), and [CustomButtonStateHandler.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/CustomButtonStateHandler/CustomButtonStateHandler.ino) as examples.
+Button2 supports "virtual buttons" - buttons not directly connected to GPIO pins. This is useful for:
+
+- **I2C/SPI port expander buttons** (e.g., PCF8574, MCP23017)
+- **Capacitive touch sensors** (e.g., ESP32 touch pins, TTP223)
+- **Custom button sources** (e.g., M5Stack Core2 touch buttons)
+- **Any non-standard input** that can be read as a digital state
+
+#### Setup Requirements
+
+To use a virtual button, you need:
+
+1. **Use `BTN_VIRTUAL_PIN`** instead of a real pin number when calling `begin()`
+2. **Define a state handler function** that returns the current button state
+3. **Initialize your hardware** either manually or via the optional initialization callback parameter
+
+`begin()` accepts an optional initialization callback parameter. This is especially useful for virtual buttons that require hardware setup (I2C, SPI, touch sensors, etc.). The callback is invoked immediately by `begin()`, ensuring your hardware is ready before the button starts polling.
+
+#### Efficient Pattern for Multiple I2C Buttons
+
+**Important:** When using multiple buttons on an I2C port expander (PCF8574, MCP23017, etc.), read the entire port **once per loop cycle** and cache the value. Each button's state handler then reads from the cache using bit masking. This minimizes I2C bus traffic from N transactions per cycle to just 1.
+
+See [I2CPortExpanderButtons.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/I2CPortExpanderButtons/I2CPortExpanderButtons.ino) for a complete example showing this efficient caching pattern ([issue #70](https://github.com/LennartHennigs/Button2/issues/70)).
+
+#### Examples
+
+- [I2CPortExpanderButtons.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/I2CPortExpanderButtons/I2CPortExpanderButtons.ino) - **Multiple buttons on I2C expander with efficient caching**
+- [CustomButtonStateHandler.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/CustomButtonStateHandler/CustomButtonStateHandler.ino) - Basic virtual button with initialization callback
+- [ESP32CapacitiveTouch.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/ESP32CapacitiveTouch/ESP32CapacitiveTouch.ino) - ESP32 capacitive touch implementation
+- [M5StackCore2CustomHandler.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/M5StackCore2CustomHandler/M5StackCore2CustomHandler.ino) - M5Stack Core2 touch buttons
+
+This feature was enhanced in [issue #69](https://github.com/LennartHennigs/Button2/issues/69) to support initialization callbacks.
 
 
 ## Callback Handler Support and Compatibility
@@ -193,13 +247,35 @@ Button2 uses callback handlers for button events. On platforms that support C++1
 
 On platforms that do not support `std::function` (such as AVR/Arduino Uno), Button2 falls back to using regular function pointers for handlers.
 
-### Forcing or Disabling `std::function` Support
+### `std::function` Support
 
-You can force-enable or disable `std::function` support by defining the following macros before including Button2:
+Button2 automatically detects and enables `std::function` support on platforms with C++11 or later, **except AVR** (Arduino Uno, Nano, Mega).
 
-- To force-enable:  
+**Supported platforms**:
+
+- ESP32 (all variants)
+- ESP8266
+- Teensy
+- Raspberry Pi Pico (RP2040)
+- SAMD (Arduino Zero, MKR series)
+- STM32
+- nRF52
+- Other C++11+ platforms with STL support
+
+**Not supported**:
+
+- AVR (Arduino Uno, Nano, Mega) - uses function pointers instead
+
+The library automatically detects support using `#if __cplusplus >= 201103L && !defined(__AVR__)`.
+This improvement was implemented in response to [issue #58](https://github.com/LennartHennigs/Button2/issues/58).
+
+#### Forcing or Disabling `std::function` Support
+
+You can override the automatic detection by defining these macros before including Button2:
+
+- To force-enable:
   `#define BUTTON2_HAS_STD_FUNCTION`
-- To force-disable:  
+- To force-disable:
   `#define BUTTON2_DISABLE_STD_FUNCTION`
 
 This is useful if you are using a custom toolchain or want to override the default detection logic.
@@ -208,7 +284,7 @@ This is useful if you are using a custom toolchain or want to override the defau
 
 ## Troubleshooting
 
-- If you see errors about `<functional>` not being found, your platform does not support `std::function`. Either use a supported board (ESP32/ESP8266) or force-disable with `#define BUTTON2_DISABLE_STD_FUNCTION` before including Button2.
+- If you see errors about `<functional>` not being found, your platform does not have C++11 STL support. Supported platforms include ESP32, ESP8266, Teensy, RP2040, SAMD, STM32, and other modern boards. AVR boards (Uno, Nano, Mega) automatically use function pointers instead. You can force-disable with `#define BUTTON2_DISABLE_STD_FUNCTION` before including Button2.
 
 ## Examples
 
@@ -219,6 +295,7 @@ This is useful if you are using a custom toolchain or want to override the defau
 - [MultiHandler.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/MultiHandler/MultiHandler.ino) – how to use a single handler for multiple events
 - [MultiHandlerTwoButtons.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/MultiHandlerTwoButtons/MultiHandlerTwoButtons.ino) – a single handler for multiple buttons
 - [TrackDualButtonClick.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/TrackDualButtonClick/TrackDualButtonClick.ino) – how to detect when two buttons are clicked at the same time
+- [I2CPortExpanderButtons.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/I2CPortExpanderButtons/I2CPortExpanderButtons.ino) – efficient pattern for multiple buttons on I2C port expanders (PCF8574, MCP23017)
 - [CustomButtonStateHandler.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/CustomButtonStateHandler/CustomButtonStateHandler.ino) - how to assign your own button handler
 - [ESP32CapacitiveTouch.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/ESP32CapacitiveTouch/ESP32CapacitiveTouch.ino) – how to access the ESP32s capacitive touch handlers
 - [M5StackCore2CustomHandler.ino](https://github.com/LennartHennigs/Button2/blob/master/examples/M5StackCore2CustomHandler/M5StackCore2CustomHandler.ino) - example for the M5Stack Core2 touch buttons

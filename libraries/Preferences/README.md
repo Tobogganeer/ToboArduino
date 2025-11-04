@@ -1,13 +1,14 @@
 # Preferences
 
-[![Arduino Library Manager](https://img.shields.io/static/v1?label=Arduino&message=v2.1.0&logo=arduino&logoColor=white&color=blue)](https://www.ardu-badge.com/Preferences)
+[![Arduino Library Manager](https://img.shields.io/static/v1?label=Arduino&message=v2.2.2&logo=arduino&logoColor=white&color=blue)](https://www.ardu-badge.com/Preferences)
 [![PlatformIO Registry](https://badges.registry.platformio.org/packages/vshymanskyy/library/Preferences.svg)](https://registry.platformio.org/packages/libraries/vshymanskyy/Preferences) 
 
 Provides **ESP32**-compatible **Preferences** API for a wider variety of platforms:
 - **ESP8266** using LittleFS
 - **RP2040** boards with [Pico core](https://github.com/earlephilhower/arduino-pico)
+- **Realtek** boards with [Ameba Arduino SDK](https://github.com/ambiot/ambd_arduino)
 - Arduino **Nano 33 IoT, MKR1010, MKR VIDOR** using WiFiNINA storage
-- Particle Gen3 devices: **Argon, Boron, Xenon, Tracker, BSOM**
+- Particle: **Muon, Photon 2, Argon, Boron, Xenon, Tracker, BSOM, MSOM, P2**
 
 Available from: [`Arduino Library Manager`](https://www.arduino.cc/reference/en/libraries/preferences), [`PlatformIO`](https://registry.platformio.org/libraries/vshymanskyy/Preferences), [`Particle Build`](https://build.particle.io/libs/Preferences)
 
@@ -24,7 +25,8 @@ void setup() {
   prefs.begin("my-app");
 
   int counter = prefs.getInt("counter", 1); // default to 1
-  Serial.printf("Reboot count: %d\n", counter);
+  Serial.print("Reboot count: ");
+  Serial.println(counter);
   counter++;
   prefs.putInt("counter", counter);
 }
@@ -46,6 +48,9 @@ Differences:
 - `getType()` and `freeEntries()` methods are not supported (returning dummy values)
 - `putBytes()` and `putString()` allow writing empty values (length = 0)
 - `put*()` and `get*()` operations **don't fail** if the existing value has a different type
+
+> [!IMPORTANT]
+> Keys are ASCII strings. The maximum key length is **15 characters**
 
 ## Known issues
 
