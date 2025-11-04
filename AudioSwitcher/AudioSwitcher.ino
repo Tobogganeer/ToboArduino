@@ -56,10 +56,10 @@ const int audioPinStates[5][4] = {
     { HIGH, LOW, LOW, LOW }    // Carputer - main 1
 };
 
-#define AUDIO_MAIN_A D5
-#define AUDIO_MAIN_B D6
-#define AUDIO_AUX_A D7
-#define AUDIO_AUX_B D8
+#define AUDIO_MAIN_A D3
+#define AUDIO_MAIN_B D4
+#define AUDIO_AUX_A D1
+#define AUDIO_AUX_B D2
 
 int audioSource;
 
@@ -77,9 +77,7 @@ void setup()
     comms.receiveTypeMask = CarDataType::ID_AUDIO_SOURCE;
 }
 
-void loop()
-{
-}
+void loop() {}
 
 void updateSelectedAudioPins()
 {
