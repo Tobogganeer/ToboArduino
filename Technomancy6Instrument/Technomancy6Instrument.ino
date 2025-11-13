@@ -7,8 +7,6 @@ const int rightPot = A1;
 const byte ROWS = 4;
 const byte COLS = 4;
 
-unsigned long vibratoTimer;
-
 char hexaKeys[ROWS][COLS] = {
     { 1, 5, 9, 13 },
     { 2, 6, 10, 14 },
@@ -39,29 +37,24 @@ void loop()
     int leftVal = 1024 - analogRead(leftPot) + 1;
     int rightVal = 1024 - analogRead(rightPot) + 1;
 
-    const int KeyMult = 10;
+    const int KeyMult = 5;
     const int PotDivisor = 30;
 
     const int BaseDuration = 15;
     const int BaseDelay = 20;
 
-    const int DurationDivisor = 100;
-    const int DelayDivisor = 80;
+    const float MaxVariation = 0.3f;
+    const float VariationPerStep = MaxVariation / 1024.0f;
+    const int VibratoPerSecond = 8;
+    const float Mult = VibratoPerSecond * 6.28f;
 
-    const float Variation = 0.9f;
+    float sinVal = sin((Mult * millis()) / 1000);
 
-    float offset = sin()
-    vibratoTimer += rightPot;
-
-    float time = millis() / (float)rightPot;
-    int loop = (int)time % 1000;
-    float offset = (sin(loop) * Variation) + 1.0f;
+    float offset = (sinVal * (VariationPerStep * rightVal)) + 1.0f;
 
     int freq = (key * KeyMult) * (leftVal / PotDivisor);
-    int duration = BaseDuration * (rightVal / DurationDivisor);
-    int delayMS = BaseDelay * (rightVal / DelayDivisor);
 
-    tone(buzzer, freq * offset, 25);
-    delay(20);
+    tone(buzzer, freq * offset, 8);
+    delay(10);
     noTone(buzzer);
 }
