@@ -39,9 +39,8 @@ const int n_7 = 0b00111000;
 const int n_8 = 0b01111111;
 const int n_9 = 0b01111101;
 
-//const int d_reverse = 0b00111111; // R
-const int d_reverse = 0b01110111; // r
-const int d_neutral = 0b00100011; // R but rightside up (incorrect for actual hud)
+const int d_reverse = 0b00000011;
+const int d_neutral = 0b00100011;
 
 const int d_dash = 0b00000001;
 
@@ -90,6 +89,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
     {
         CarInfoMsg* info = (CarInfoMsg*)data;
         setSpeed(info->speed);
+        hud.setIntensity(0, info->lightsOn ? 1 : 8);
     }
     else if (type == CarDataType::ID_GEAR)
     {
@@ -98,19 +98,7 @@ void handleCarData(CarDataType type, const uint8_t* data, int len)
     }
 }
 
-void loop()
-{
-    for (int j = 0; j < 7; j++)
-    {
-        setGear(gearDigit, (Gear)j);
-
-        for (uint8_t i = 0; i < 20; i++)
-        {
-            setSpeed(i);
-            delay(50);
-        }
-    }
-}
+void loop() {}
 
 void setSpeed(uint8_t speed)
 {
@@ -120,7 +108,7 @@ void setSpeed(uint8_t speed)
 
     setDigit(hundredsDigit, hundreds > 0 ? digits[hundreds] : 0);        // '0' character would be blank (all bits zero)
     setDigit(tensDigit, (tens > 0 || hundreds > 0) ? digits[tens] : 0);  // Make sure numbers like 101 will display
-    setDigit(onesDigit, digits[ones]);                                        // Display a 0 if the total speed is zero
+    setDigit(onesDigit, digits[ones]);                                   // Display a 0 if the total speed is zero
 }
 
 void setGear(int digit, uint8_t gear)

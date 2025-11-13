@@ -811,6 +811,7 @@ bool bt_forward;
 	bool door_rearDriverOpen;
 	bool door_rearPassengerOpen;
 	bool door_hatchOpen;
+    bool lightsOn;
 
 */
 
@@ -878,7 +879,7 @@ void handleHSMessage()
         Serial.print("Brake: ");
         Serial.println(rxBuf[2] & 0b01000000 > 0);
     }
-    if (rxId == 0x201)
+    else if (rxId == 0x201)
     {
         Serial.print("RPM: ");
         Serial.println(convert(rxBuf[1], rxBuf[0]).ushortVal);
@@ -896,14 +897,14 @@ void handleHSMessage()
         Serial.println(rxBuf[6] / 2.0f);
         data.throttlePosition = rxBuf[6] / 2;
     }
-    if (rxId == 0x420)
+    else if (rxId == 0x420)
     {
         // B1: Engine oil temperature?
         // Probably actually coolant temp - (B1 - 40 = degrees celsius)
         // B2: Distance (0,2m resolution – resets every 51m)
         // B3: Fuel consumption (cumulative)
     }
-    if (rxId == 0x430)
+    else if (rxId == 0x430)
     {
         Serial.print("Fuel level: ");
         Serial.println((rxBuf[0] * 0.25f) / 55.0f * 100.0f);
@@ -912,11 +913,11 @@ void handleHSMessage()
         // B1: Fuel level. 1 unit = 0,25l - 60.25L total (241 steps)
         // B2: Fuel tank sensor (?)
     }
-    if (rxId == 0x433)
+    else if (rxId == 0x433)
     {
-        Serial.print("Doors: ");
-        printBits(rxBuf[0]);
-        Serial.println();
+        //Serial.print("Doors: ");
+        //printBits(rxBuf[0]);
+        //Serial.println();
         // B1: Doors. Ex. front left door open: 0x80, trunk open: 0x08
         // B4: bit1 = hand brake, bit2 = reverse gear
 
@@ -928,8 +929,10 @@ void handleHSMessage()
         data.handbrakeOn = (rxBuf[3] & 0b00000010) > 0;
         printBits(rxBuf[3]);
         Serial.println();
+
+        data.lightsOn = (rxBuf[7] & 0x01) > 0;
     }
-    if (rxId == 0x4DA)
+    else if (rxId == 0x4DA)
     {
         // B1-2: Steering angle. Values from about 0x6958 (all way left) to about 0x96A8 all way right).
         // Can have offset, because when turning on dashboard it always resets to zero, regardless of the effective steering angle position.
@@ -1016,6 +1019,13 @@ void handleMSMessage()
         // B3-6: Odometer
         uint32_t odo = convert(rxBuf[5], rxBuf[4], rxBuf[3], rxBuf[2]).uintVal;
         data.odometer = odo;
+
+        // B1-2: Doors + hatch
+        data.door_frontDriverOpen = (rxBuf[0] & 0x80) > 0;
+        data.door_frontPassengerOpen = (rxBuf[0] & 0x40) > 0;
+        data.door_rearDriverOpen = (rxBuf[0] & 0x20) > 0;
+        data.door_rearPassengerOpen = (rxBuf[0] & 0x10) > 0;
+        data.door_hatchOpen = (rxBuf[1] & 0x10) > 0;
     }
     if (rxId == 0x400)
     {
