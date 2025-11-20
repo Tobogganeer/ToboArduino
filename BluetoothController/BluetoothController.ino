@@ -1114,7 +1114,8 @@ void mainSettings_click()
             // Pair if we have room
             if (devices.devices.count < 5)
             {
-                disconnect();
+                // Don't disconnect - it restarts the main module and then we can't pair :P
+                //disconnect();
                 switchStateInstant(STATE_DISCOVERABLE);
             }
             break;
