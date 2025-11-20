@@ -75,6 +75,10 @@ void setup()
 
     comms.begin();
     comms.receiveTypeMask = CarDataType::ID_AUDIO_SOURCE;
+
+    // Set default before we receive state from the switcher
+    audioSource = 0;
+    updateSelectedAudioPins();
 }
 
 void loop() {}
