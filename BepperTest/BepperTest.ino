@@ -1,4 +1,4 @@
-int beepPin = 7;
+int beepPin = 6;
 
 bool wasBeeping;
 bool doBeep;
@@ -48,9 +48,10 @@ void TurnOnBeep()
         return;
 
     beeping = true;
+    blankLength = random(300, 500);
 
     digitalWrite(beepPin, HIGH);
-    // TODO: Turn on beeper
+    //tone(beepPin, random(500, 2000));
 }
 
 void TurnOffBeep()
@@ -59,7 +60,8 @@ void TurnOffBeep()
         return;
 
     beeping = false;
+    beepLength = random(550, 800);
 
     digitalWrite(beepPin, LOW);
-    // TODO: Turn off beeper
+    //noTone(beepPin);
 }
