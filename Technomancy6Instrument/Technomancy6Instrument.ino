@@ -37,24 +37,26 @@ void loop()
     int leftVal = 1024 - analogRead(leftPot) + 1;
     int rightVal = 1024 - analogRead(rightPot) + 1;
 
-    const int KeyMult = 5;
+    const int KeyMult = 3;
     const int PotDivisor = 30;
 
     const int BaseDuration = 15;
     const int BaseDelay = 20;
 
-    const float MaxVariation = 0.3f;
+    const float MaxVariation = 0.1f;
     const float VariationPerStep = MaxVariation / 1024.0f;
-    const int VibratoPerSecond = 8;
+    const int VibratoPerSecond = 10;
     const float Mult = VibratoPerSecond * 6.28f;
 
     float sinVal = sin((Mult * millis()) / 1000);
 
-    float offset = (sinVal * (VariationPerStep * rightVal)) + 1.0f;
+    float offset = (sinVal * (VariationPerStep * rightVal)) + 0.98f;
 
     int freq = (key * KeyMult) * (leftVal / PotDivisor);
 
     tone(buzzer, freq * offset, 8);
     delay(10);
     noTone(buzzer);
+
+    // 7 9 7 9 8 B 6 8 6 5
 }
