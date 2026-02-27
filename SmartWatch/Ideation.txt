@@ -1,0 +1,15 @@
+ESP32:
+- I2C, 2xSPI, 2xI2S, 1xUART, 15x good pins + 4x input only + 5x strapping, 4mb flash memory
+- DACs (2x) are only 8 bit (not great for audio, fine for wii-mote audio)
+
+ESP32-C3
+- I2C, SPI, I2S, UART, RMT controller (for IR), 15 GPIO (3x strapping)
+
+
+
+SD Card module: SPI
+
+RTC: PCF8523 + 32khz crystal
+
+GPS, Camera, Infrared transceiver, laser pointer, GPIO pins, flashlight,
+accelerometer, humidity/temp, LoRa comms, capacative touch, RTC (real-time clock) obviously
